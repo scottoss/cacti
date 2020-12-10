@@ -27,7 +27,7 @@ BOT_SONG_RE = re.compile(
 class Lyrics(commands.Cog):
 
     __author__ = ["Predeactor"]
-    __version__ = "v1.0.3"
+    __version__ = "v1.0.4"
 
     def __init__(self, bot, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -101,10 +101,10 @@ class Lyrics(commands.Cog):
             return
         music = available_musics[chosen_music]
         embeds = []
-        embed = discord.Embed(color=await ctx.embed_color(), title=music.name, description=None)
-        embed.set_thumbnail(url=music.album_art)
-        embed.set_footer(text="Powered by KSoft.Si.", icon_url=ctx.author.avatar_url)
         for text in pagify(music.lyrics):
+            embed = discord.Embed(color=await ctx.embed_color(), title=music.name, description=None)
+            embed.set_thumbnail(url=music.album_art)
+            embed.set_footer(text="Powered by KSoft.Si.", icon_url=ctx.author.avatar_url)
             embed.description = text
             embeds.append(embed)
         if len(embeds) > 1:
