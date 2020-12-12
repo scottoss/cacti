@@ -27,7 +27,7 @@ BOT_SONG_RE = re.compile(
 class Lyrics(commands.Cog):
 
     __author__ = ["Predeactor"]
-    __version__ = "v1.0.4"
+    __version__ = "v1.0.5"
 
     def __init__(self, bot, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -101,15 +101,16 @@ class Lyrics(commands.Cog):
             return
         music = available_musics[chosen_music]
         embeds = []
+        color = await ctx.embed_color()
         for text in pagify(music.lyrics):
-            embed = discord.Embed(color=await ctx.embed_color(), title=music.name, description=None)
+            embed = discord.Embed(color=color, title=music.name, description=None)
             embed.set_thumbnail(url=music.album_art)
             embed.set_footer(text="Powered by KSoft.Si.", icon_url=ctx.author.avatar_url)
             embed.description = text
             embeds.append(embed)
         if len(embeds) > 1:
             create_task(
-                menu(ctx, embeds, DEFAULT_CONTROLS)
+                menu(ctx, embeds, DEFAULT_CONTROLS, timeout=600)
             )  # No await since max_concurrency is here
         else:
             await ctx.send(embed=embeds[0])
@@ -129,18 +130,21 @@ class Lyrics(commands.Cog):
             A tuple that contain a string with the message to send and a dict with methods
             available.
         """
-        message = "Please select the music you wish to get the lyrics by selecting the corresponding number:\n\n"
+        message = (
+            "Please select the music you wish to get the lyrics by selecting the corresponding "
+            "number (Say `-1` to abort):\n\n"
+        )
         method = {}
         n = 0
         for music in list_of_music:
             if not isinstance(music, ksoftapi.models.LyricResult):
                 continue  # Not a music
             year = music.album_year[0]
-            message += "`{number}` - {title} by {author} {year}\n".format(
+            message += "`{number}` - {title} by {author}{year}\n".format(
                 number=n,
                 title=music.name,
                 author=music.artist,
-                year="(" + bold(str(year)) + ")" if year and int(year) > 1970 else "",
+                year=" (" + bold(str(year)) + ")" if year and int(year) > 1970 else "",
             )
             method[str(n)] = music
             n += 1
