@@ -11,14 +11,14 @@ from akinator import CantGoBackAnyFurther, InvalidLanguageError
 
 import discord
 
+__author__ = ["Predeactor"]
+__version__ = "Beta v0.6.2"
+
 
 class AkinatorCog(commands.Cog, name="Akinator"):
     """
     The genius, Akinator, will guess your mind and find who you are thinking of, go challenge him!
     """
-
-    __author__ = ["Predeactor"]
-    __version__ = "Beta v0"
 
     def __init__(self, bot: Red, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -33,8 +33,8 @@ class AkinatorCog(commands.Cog, name="Akinator"):
         pre_processed = super().format_help_for_context(ctx)
         return "{pre_processed}\n\nAuthor: {authors}\nVersion: {version}".format(
             pre_processed=pre_processed,
-            authors=humanize_list(self.__author__),
-            version=self.__version__,
+            authors=humanize_list(__author__),
+            version=__version__,
         )
 
     @commands.group()
@@ -67,10 +67,10 @@ class AkinatorCog(commands.Cog, name="Akinator"):
             return
         await ctx.send("Let's go!")
         game_class = UserGame(ctx.author, ctx.channel, self.bot)
-        self.ongoing_games[str(ctx.author.id)] = game_class
+        self.ongoing_games[ctx.author.id] = game_class
         await ctx.send(
             "Do you wish to set a specific language? If so, please specify it now (Find all "
-            "available language at https://github.com/NinjaSnail1080/akinator.py#functions) else "
+            "available language at <https://github.com/NinjaSnail1080/akinator.py#functions>) else "
             "just say 'no'."
         )
         try:
@@ -84,19 +84,19 @@ class AkinatorCog(commands.Cog, name="Akinator"):
         lang = res if res not in ("no", "n") else "en"
         await game_class.start_akinator_game(language=lang)
         try:
-            del self.ongoing_games[str(ctx.author.id)]
+            del self.ongoing_games[ctx.author.id]
         except KeyError:
             pass
 
     @akinator.command()
     async def cancel(self, ctx: commands.Context):
         """Cancel your game with Akinator."""
-        if str(ctx.author.id) not in self.ongoing_games:
+        if ctx.author.id not in self.ongoing_games:
             await ctx.send("You're not running any game!")
             return
-        game_class: UserGame = self.ongoing_games[str(ctx.author.id)]
+        game_class: UserGame = self.ongoing_games[ctx.author.id]
         game_class.task.cancel()
-        self.ongoing_games.pop(str(ctx.author.id))
+        self.ongoing_games.pop(ctx.author.id)
         await ctx.tick()
 
 
@@ -114,8 +114,6 @@ class UserGame:
     async def ask_question(self):
         await self.channel.send("Question #{num}: ".format(num=self.count) + str(self.question))
         received = await self.wait_for_input()
-        if received:
-            self.count += 1
         return received
 
     async def wait_for_input(self):
@@ -139,6 +137,7 @@ class UserGame:
             "2",
             "3",
             "4",
+            "b",
         ]
         while valid_answer is not True:
             self.task = asyncio.create_task(
@@ -174,6 +173,7 @@ class UserGame:
 
     async def answer_questions(self):
         """A while loop."""
+        user_prompt = None
         while self.akinator.progression <= self.prog:
             user_prompt = await self.ask_question()
             if not user_prompt:
@@ -182,15 +182,17 @@ class UserGame:
 
             if user_prompt in ("b", "back"):
                 await self.go_back()
-                await self.ask_question()
                 continue
 
             self.question = await self.akinator.answer(user_prompt)
+            self.count += 1
+        return user_prompt
 
     async def go_back(self) -> str:
         """Go back to the latest question."""
         try:
             self.question = await self.akinator.back()
+            self.count -= 1
         except CantGoBackAnyFurther:
             await self.channel.send(
                 "Cannot go back any further! You will have to answer my question."
@@ -227,8 +229,10 @@ class UserGame:
         embed.set_image(url=self.akinator.first_guess["absolute_picture_path"])
         embed.set_footer(
             icon_url=self.user.avatar_url,
-            text="Game running for {name}. I asked over {num} questions!".format(
-                name=self.user.name, num=self.count
+            text=(
+                "Game running for {name}. I asked over {num} questions! (Cog version {ver})"
+            ).format(
+                name=self.user.name, num=self.count, ver=__version__
             ),
         )
         return embed
