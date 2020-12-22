@@ -12,15 +12,16 @@ This is a repo made for [Red](https://github.com/Cog-Creators/Red-DiscordBot).
 
 ## Available cogs list
 
-| Cog Name        | Description                                                                              | Version     |
-| --------------- | ---------------------------------------------------------------------------------------- | ----------- |
-| Captcher        | Captcha cog.                                                                             | Beta v0.5.1 |
-| CleverBot       | Talk or ask a question to CleverBot for free.                                            | v1.0.5      |
-| CommandsCounter | Know how many time a command has been used super easily.                                 | v1          |
-| CustomCooldown  | Custom slowmode/cooldown moderated by the bot itself.                                    | v1.3.3      |
-| LeaderBoard     | Global reputation system using points.                                                   | v1.0.2      |
-| Lyrics          | Get lyrics of a music through KSoft.Si.                                                  | v1.0.5      |
-| SXCU            | Shorten your link, upload your images through a custom subdomain and more in the future. | Beta v0.4   |
+| Cog Name                | Description                                                                              | Version     |
+| ----------------------- | ---------------------------------------------------------------------------------------- | ----------- |
+| Akinator (akinatorgame) | A genius right in your bot, ready to discover yourself.                                  | Beta v0.6   |
+| Captcher                | Captcha cog.                                                                             | Beta v0.5.1 |
+| CleverBot               | Talk or ask a question to CleverBot for free.                                            | v1.0.5      |
+| CommandsCounter         | Know how many time a command has been used super easily.                                 | v1          |
+| CustomCooldown          | Custom slowmode/cooldown moderated by the bot itself.                                    | v1.3.3      |
+| LeaderBoard             | Global reputation system using points.                                                   | v1.0.2      |
+| Lyrics                  | Get lyrics of a music through KSoft.Si.                                                  | v1.0.5      |
+| SXCU                    | Shorten your link, upload your images through a custom subdomain and more in the future. | Beta v0.4   |
 
 ## Hidden cogs
 
@@ -41,6 +42,6 @@ If you're having any important(s) issue(s), open an issue or pull request to thi
 
 ## Credits (AKA. Awesome peoples)
 
-* `LeaderBoard` : **Fixator10** for the `repboard` command logic.
-* `CustomCooldown` : **jacob** as the original requester who allowed me to push the cog to my repo and **Maaz** as the original code creator.
-* `CommandsCounter`: **ScarletRav3n** as the original Cog Creator that made the `count` cog.
+* `LeaderBoard` **Fixator10** for the `repboard` command logic.
+* `CustomCooldown` **jacob** as the original requester who allowed me to push the cog to my repo and **Maaz** as the original code creator.
+* `CommandsCounter` **ScarletRav3n** as the original Cog Creator that made the `count` cog.
