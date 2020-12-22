@@ -231,8 +231,6 @@ class UserGame:
             icon_url=self.user.avatar_url,
             text=(
                 "Game running for {name}. I asked over {num} questions! (Cog version {ver})"
-            ).format(
-                name=self.user.name, num=self.count, ver=__version__
-            ),
+            ).format(name=self.user.name, num=self.count, ver=__version__),
         )
         return embed
