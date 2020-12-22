@@ -37,7 +37,7 @@ class AkinatorCog(commands.Cog, name="Akinator"):
             version=__version__,
         )
 
-    @commands.group()
+    @commands.group(aliases=["aki"])
     async def akinator(self, ctx: commands.GuildContext):
         """
         Answer Akinator's question and get challenged!

@@ -7,5 +7,5 @@
         "aiodns",
         "cchardet",
         "akinator.py[fast_async]"
-    ],
+    ]
 }
