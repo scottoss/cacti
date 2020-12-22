@@ -19,7 +19,7 @@ BOT_SONG_RE = re.compile(
         r"((\[)|(\()).*(of?ficial|feat\.?|"  # Thanks Wyn for the logic!
         r"ft\.?|audio|video|lyrics?|remix|HD).*(?(2)]|\))"
     ),
-    flags=re.I
+    flags=re.I,
 )
 # https://github.com/TheWyn/Wyn-RedV3Cogs/blob/master/lyrics/lyrics.py#L10
 
@@ -27,7 +27,7 @@ BOT_SONG_RE = re.compile(
 class Lyrics(commands.Cog):
 
     __author__ = ["Predeactor"]
-    __version__ = "v1.0.5"
+    __version__ = "v1.0.6"
 
     def __init__(self, bot, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -74,7 +74,9 @@ class Lyrics(commands.Cog):
             await ctx.send("No lyrics were found for your music.")
             return
         except ksoftapi.APIError as e:
-            await ctx.send("The API returned an unknown error: {error}".format(error=inline(e)))
+            await ctx.send(
+                "The API returned an unknown error: {error}".format(error=inline(str(e)))
+            )
             return
         except ksoftapi.Forbidden:
             await ctx.send("Request forbidden by the API.")
@@ -137,6 +139,7 @@ class Lyrics(commands.Cog):
         method = {}
         n = 0
         for music in list_of_music:
+            # noinspection PyUnresolvedReferences
             if not isinstance(music, ksoftapi.models.LyricResult):
                 continue  # Not a music
             year = music.album_year[0]
