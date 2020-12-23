@@ -12,11 +12,6 @@ try:
     from wheezy.captcha import image as wheezy_captcha
 except ImportError:
     wheezy_captcha = None
-"""
-    captcha.image
-    ~~~~~~~~~~~~~
-    Generate Image CAPTCHAs, just the normal image CAPTCHAs you are using.
-"""
 
 # Note: This file is from an open-source project under the name of "captcha" maintained by
 # lepture. This is a copy and modified version of a project's file. Following text is a copy

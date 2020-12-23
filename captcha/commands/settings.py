@@ -32,13 +32,12 @@ class RoleConverter(commands.RoleConverter):
             )
         if ctx.author.id == ctx.guild.owner.id:
             return role
-        else:
-            if role.position >= ctx.me.top_role.position:
-                raise BadArgument(
-                    _("This role is higher than my highest role in the discord hierarchy.")
-                )
-            if role.position >= ctx.author.top_role.position:
-                raise BadArgument(_("This role is higher than your own in the discord hierarchy."))
+        if role.position >= ctx.me.top_role.position:
+            raise BadArgument(
+                _("This role is higher than my highest role in the discord hierarchy.")
+            )
+        if role.position >= ctx.author.top_role.position:
+            raise BadArgument(_("This role is higher than your own in the discord hierarchy."))
         return role
 
 

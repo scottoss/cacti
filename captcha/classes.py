@@ -116,7 +116,6 @@ class CaptchaTask(ChallengeMixinMeta):
         """
         for task in self.tasks:
             task.cancel()
-            log.debug
         log.debug("Tasks cancelled.")
 
     def running(self):
