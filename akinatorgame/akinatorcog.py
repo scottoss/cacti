@@ -1,4 +1,5 @@
 import asyncio
+from json import JSONDecodeError
 
 from redbot.core import commands
 from redbot.core.bot import Red
@@ -7,12 +8,12 @@ from redbot.core.utils.chat_formatting import humanize_list
 from redbot.core.utils.embed import randomize_colour
 
 from akinator.async_aki import Akinator
-from akinator import CantGoBackAnyFurther, InvalidLanguageError
+from akinator import CantGoBackAnyFurther, InvalidLanguageError, AkiNoQuestions
 
 import discord
 
 __author__ = ["Predeactor"]
-__version__ = "Beta v0.6.2"
+__version__ = "Beta v0.6.3"
 
 
 class AkinatorCog(commands.Cog, name="Akinator"):
@@ -178,15 +179,20 @@ class UserGame:
             user_prompt = await self.ask_question()
             if not user_prompt:
                 await self.channel.send("This is the end of the game.")
-                return None
+                return False
 
             if user_prompt in ("b", "back"):
                 await self.go_back()
                 continue
 
-            self.question = await self.akinator.answer(user_prompt)
-            self.count += 1
-        return user_prompt
+            try:
+                self.question = await self.akinator.answer(user_prompt)
+                self.count += 1
+            except JSONDecodeError:
+                await self.channel.send("An unexpected error happened.")
+            except AkiNoQuestions:
+                return True
+        return True
 
     async def go_back(self) -> str:
         """Go back to the latest question."""

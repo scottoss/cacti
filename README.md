@@ -14,7 +14,7 @@ This is a repo made for [Red](https://github.com/Cog-Creators/Red-DiscordBot).
 
 | Cog Name                | Description                                                                              | Version     |
 | ----------------------- | ---------------------------------------------------------------------------------------- | ----------- |
-| Akinator (akinatorgame) | A genius right in your bot, ready to discover yourself.                                  | Beta v0.6.2 |
+| Akinator (akinatorgame) | A genius right in your bot, ready to discover yourself.                                  | Beta v0.6.3 |
 | Captcher                | Captcha cog.                                                                             | Beta v0.5.1 |
 | CleverBot               | Talk or ask a question to CleverBot for free.                                            | v1.0.5      |
 | CommandsCounter         | Know how many time a command has been used super easily.                                 | v1          |
