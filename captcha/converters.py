@@ -7,8 +7,8 @@ from redbot.core import commands
 # A logic from Trusty-Cogs, thank you!
 # https://github.com/TrustyJAID/Trusty-cogs/blob/master/roletools/converter.py#L29
 
-class RoleConverter(commands.RoleConverter, discord.Role):
 
+class RoleConverter(commands.RoleConverter, discord.Role):
     async def convert(self, ctx: commands.Context, argument: str) -> discord.Role:
         if not ctx.me.guild_permissions.manage_roles:
             raise BadArgument("I require manage roles permission to use this command.")

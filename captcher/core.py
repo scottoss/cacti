@@ -8,13 +8,20 @@ from random import randint
 from typing import Literal, Optional
 
 import discord
-from captcha.image import ImageCaptcha
 from discord.utils import get
 from redbot.core import Config, commands, modlog
 from redbot.core.bot import Red
 from redbot.core.data_manager import bundled_data_path
-from redbot.core.utils.chat_formatting import bold, error, humanize_list, info, inline
+from redbot.core.utils.chat_formatting import (
+    bold,
+    error,
+    humanize_list,
+    info,
+    inline,
+)
 from redbot.core.utils.predicates import MessagePredicate
+
+from captcha.image import ImageCaptcha
 
 
 class Core(commands.Cog):

@@ -8,7 +8,6 @@ from ..abc import MixinMeta
 
 
 class OwnerCommands(MixinMeta, metaclass=ABCMeta):
-
     @commands.group(name="ownersetcaptcha", aliases=["setownercaptcha", "captchasetowner"])
     @commands.is_owner()
     async def ownercmd(self, ctx: commands.GuildContext):

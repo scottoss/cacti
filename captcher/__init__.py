@@ -1,5 +1,6 @@
-from .captcher import Captcher
 from redbot.core.bot import Red
+
+from .captcher import Captcher
 
 __red_end_user_data_statement__ = "This cog does not save data about users persistently."
 

@@ -29,23 +29,23 @@ class MixinMeta(ABC):
         file: discord.File = None,
         embed: discord.Embed = None,
     ):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     @abstractmethod
     def create_challenge_for(self, member: discord.Member):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     @abstractmethod
     def delete_challenge_for(self, member: Union[discord.Member, int]) -> bool:
-        raise NotImplemented()
+        raise NotImplementedError()
 
     @abstractmethod
     def is_running_captcha(self, user_or_id: Union[discord.Member, int]):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     @abstractmethod
     def _initialize(self, send_patchnote: bool = True):
-        raise NotImplemented()
+        raise NotImplementedError()
 
 
 class CompositeMetaClass(type(Cog), type(ABC)):
