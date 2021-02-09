@@ -157,14 +157,23 @@ class Settings(MixinMeta, metaclass=ABCMeta):
         )
 
     @config.command(name="temprole", usage="<temporary_role_or_'none'>")
-    async def temporary_role_setter(self, ctx: commands.Context, *, role):
+    async def temporary_role_setter(self, ctx: commands.Context, *, role: Union[discord.Role, str]):
         """
         Give a temporary role when initilalizing the captcha challenge.
 
         This role will be added while the user must answer the captcha.
         """
-        if not isinstance(role, discord.Role) or not isinstance(role, str):
+        if not isinstance(role, (discord.Role, str)):
             await ctx.send('Converting to "discord.Role" or "str" failed for parameter "role".')
+            return
+        if isinstance(role, str):
+            if role.lower() == "none":
+                await self.data.guild(ctx.guild).temprole.clear()
+                await ctx.send("Cleared! Don't grin like that.")
+            else:
+                await ctx.send('Converting to "discord.Role" or "str" failed for parameter "role".')
+                # EEEHHHH C'EST LE DAB DU J'M'EN BAT ROYAL LES COUILLES
+            return
         await self.data.guild(ctx.guild).temprole.set(role.id)
         await ctx.send(
             form.info(form.bold("Temporary role registered: {role}".format(role=role.name)))

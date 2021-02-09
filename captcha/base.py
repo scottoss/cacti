@@ -92,7 +92,7 @@ class Captcha(
                 allowed_mentions=discord.AllowedMentions(users=False),
             )
             return message_to_update
-        elif log_channel:
+        if log_channel:
             return await log_channel.send(
                 content,
                 file=file,
