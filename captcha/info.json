@@ -12,7 +12,7 @@
         "defender"
     ],
     "requirements": [
-        "wheezy.captcha"
+        "discapty"
     ],
     "disabled": true
 }

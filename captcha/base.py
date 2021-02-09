@@ -1,63 +1,129 @@
-"""
-I can't believe you're reading this file, if you're not a Red gang member.
-Feel free to explore the files of this project.
-
-This is a full and complete rewrite of my oldest project, Captcher.
-Where I wasn't satisfied with Captcher, I now can feel free to do things correctly in here.
-
-This rewrite include a lot of copy-paste from https://github.com/retke/Laggrons-Dumb-Cogs.
-Thanks for the code, it was very helpful and I'm learning always a little bit more. :)
-
-It's so cool that I can write shit here without no one noticing on the bot!
-IMABUTTEFLYJZIEOFJOIENAIUDBACZD
-"""
-
-# Builtin/pip related
 import logging
+from datetime import datetime
+from typing import Optional, Union
 
-# Discord/Red related
-from redbot.core import commands, Config
+import discapty
+import discord
+from redbot.core import Config, commands
 from redbot.core.bot import Red
-from redbot.core.utils.chat_formatting import humanize_list, warning
-from redbot.core.i18n import Translator, cog_i18n
+from redbot.core.utils.chat_formatting import bold, humanize_list
 
-# Local
 from .abc import CompositeMetaClass
-from .commands.settings import Settings
-from .commands.global_settings import OwnerCommands
-from .event import Listeners
-from .informations import __version__, __author__
+from .api import API
+from .commands import OwnerCommands, Settings
+from .events import Listeners
+from .errors import AlreadyHaveCaptchaError, MissingRequiredValueError, DeletedValueError
+from .informations import (
+    __author__,
+    __patchnote__,
+    __patchnote_version__,
+    __version__,
+)
 
+DEFAULT_GLOBAL = {"log_level": 50}
+DEFAULT_GUILD = {
+    "channel": None,  # The channel where the captcha is sent.
+    "logschannel": None,  # Where logs are sent.
+    "enabled": False,  # if challenges must be activated.
+    "autoroles": [],  # Roles to give.
+    "temprole": None,  # Temporary role to give.
+    "type": "plain",  # Captcha type.
+    "timeout": 5,  # Time in minutes before kicking.
+}
 log = logging.getLogger("red.predeactor.captcha")
-_ = Translator("Captcha", __file__)
 
 
-@cog_i18n(_)
-class Base(
-    Settings, OwnerCommands, Listeners, commands.Cog, name="Captcha", metaclass=CompositeMetaClass
+class Captcha(
+    Settings,
+    OwnerCommands,
+    Listeners,
+    commands.Cog,
+    name="Captcha",
+    metaclass=CompositeMetaClass,
 ):
-    """A Captcha defensive system. Challenge the new users and protect yourself a bit more of raids."""
+    """A Captcha defensive system. to challenge the new users and protect yourself a bit more of
+    raids."""
 
     def __init__(self, bot: Red) -> None:
         super().__init__()
-        self.bot = bot
-        self.data = Config.get_conf(None, identifier=495954056, cog_name="Captcha")
-        # Must use cog_name this way, else the name could be "Base", which will be annoying later
-        self.data.register_global(
-            log_level=50  # According to the logging docs, we just remove the 0 to be easier.
-        )
-        self.data.register_guild(
-            channel=None,  # The channel where the captcha is sent.
-            logschannel=None,  # Where logs are sent.
-            enabled=False,  # if challenges must be activated.
-            autoroles=[],  # Roles to give.
-            temprole=None,  # Temporary role to give
-            type="PLAIN",  # Captcha type.
-            timeout=5,  # Timeout before kicking.
-        )
-        self.user_challenge_class = {}
-        # This dict will contain the user ID we're challenging, inside will be the associated
-        # challenge class.
+
+        self.bot: Red = bot
+
+        self.data: Config = Config.get_conf(None, identifier=495954056, cog_name="Captcha")
+        self.data.register_global(**DEFAULT_GLOBAL)
+        self.data.register_guild(**DEFAULT_GUILD)
+
+        self.running = {}
+        self.api = API(self.bot, self.data)
+
+        self.version = __version__
+        self.patchnote = __patchnote__
+        self.patchnoteconfig = None
+
+    async def send_or_update_log_message(
+        self,
+        guild: discord.Guild,
+        message_content: str,
+        message_to_update: Optional[discord.Message] = None,
+        *,
+        member: discord.Member = None,
+        file: discord.File = None,
+        embed: discord.Embed = None,
+    ) -> discord.Message:
+        """
+        Send a message or update one in the log channel.
+        """
+        time = datetime.now().strftime("%H:%M - %w/%d/%Y")
+        content = ""
+        if message_to_update:
+            content += message_to_update.content + "\n"
+        content += f"{bold(str(time))}{f' {member.mention}' if member else ''}: {message_content}"
+
+        log_channel_id: Union[int, None] = await self.data.guild(guild).logschannel()
+        if not log_channel_id:
+            raise MissingRequiredValueError("Missing logging channel ID.")
+
+        log_channel: discord.TextChannel = self.bot.get_channel(log_channel_id)
+        if log_channel and message_to_update:
+            await message_to_update.edit(
+                content=content,
+                file=file,
+                embed=embed,
+                allowed_mentions=discord.AllowedMentions(users=False),
+            )
+            return message_to_update
+        elif log_channel:
+            return await log_channel.send(
+                content,
+                file=file,
+                embed=embed,
+                allowed_mentions=discord.AllowedMentions(users=False),
+            )
+        raise DeletedValueError("Logging channel may have been deleted.")
+
+    async def create_challenge_for(self, member: discord.Member) -> discapty.Captcha:
+        """
+        Create a Challenge class for an user and append it to the running challenges.
+        """
+        if member.id in self.running:
+            raise AlreadyHaveCaptchaError("The user already have a captcha object running.")
+        captcha_type = await self.config.guild(member.guild).type()
+        captcha = discapty.Captcha(captcha_type)
+        self.running[member.id] = captcha
+        return captcha
+
+    def delete_challenge_for(self, member: Union[discord.Member, int]) -> bool:
+        if isinstance(member, discord.Member):
+            member = member.id
+        if member in self.running:
+            del self.running[member.id]
+            return True
+        return False
+
+    def is_running_captcha(self, user_or_id: Union[discord.Member, int]) -> bool:
+        if isinstance(user_or_id, discord.Member):
+            user_or_id = int(user_or_id.id)
+        return user_or_id in self.running
 
     def format_help_for_context(self, ctx: commands.Context) -> str:
         """
@@ -65,26 +131,46 @@ class Base(
         Thank to Sinbad.
         """
         pre_processed = super().format_help_for_context(ctx)
-        return (
-            _("{pre_processed}\n\nAuthor: {authors}\nVersion: {version}\n{additional}")
-        ).format(
+        return "{pre_processed}\n\nAuthor: {authors}\nVersion: {version}".format(
             pre_processed=pre_processed,
             authors=humanize_list(__author__),
-            version=__version__,
-            additional=warning(
-                "This cog (Captcha) is in '{version}' version. You are kindly asked to unload "
-                "this cog. You won't receive support for this cog. - Predeactor".format(
-                    version=__version__
-                )
-            ),
+            version=self.version,
         )
 
-    async def initialize(self):
+    async def _initialize(self, send_patchnote: bool = True) -> None:
+        """
+        An initializer for the cog.
+        It just set the logging level and send the patchnote if asked.
+        """
         log_level = await self.data.log_level()
         log.setLevel(log_level)
         log.info("Captcha logging level has been set to: {lev}".format(lev=log_level))
         log.debug(
-            "Debug: This logging level is reserved for testing and monitoring purpose, set the "
-            "level to 3 if you prefer to be alerted by less minor events or doesn't want to help "
+            "This logging level is reserved for testing and monitoring purpose, set the "
+            "level to 2 if you prefer to be alerted by less minor events or doesn't want to help "
             "debugging this cog."
         )
+        if send_patchnote:
+            await self._send_patchnote()
+
+    async def _send_patchnote(self) -> None:
+        await self.bot.wait_until_red_ready()
+        self.patchnoteconfig = notice = Config.get_conf(
+            None,
+            identifier=4145125452,
+            cog_name="PredeactorNews",
+        )
+        notice.register_user(version="0")
+        async with notice.get_users_lock():
+            old_patchnote_version: str = await notice.user(self.bot.user).version()
+            if old_patchnote_version != __patchnote_version__:
+                log.info("New version of patchnote detected! Delivering... (¬‿¬ )")
+                await self.bot.send_to_owners(self.patchnote)
+                await notice.user(self.bot.user).version.set(__patchnote_version__)
+
+
+def setup(bot: Red):
+    cog = Captcha(bot)
+    bot.add_cog(cog)
+    # noinspection PyProtectedMember
+    bot.loop.create_task(cog._initialize())

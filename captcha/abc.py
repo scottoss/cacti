@@ -1,30 +1,51 @@
-from abc import ABC
-from redbot.core.commands import Cog
-
+from abc import ABC, abstractmethod
+from typing import Optional, Union
 
 import discord
 from redbot.core import Config
 from redbot.core.bot import Red
+from redbot.core.commands import Cog
 
 
 class MixinMeta(ABC):
-    def __init__(self):
+    def __init__(self, *_args):
         self.bot: Red
+
         self.data: Config
-        self.user_challenge_class: dict
+        self.running: dict
 
+        self.version: str
+        self.patchnote: str
+        self.patchnoteconfig: Config
 
-class ChallengeMixinMeta(ABC):
-    def __init__(self):
-        self.initialized: bool
-        self.running: bool
-        self.member: discord.Member
-        self.guild = discord.Guild
-        self.data = Config
-        self.tasks: list
-        self.channel: discord.TextChannel
-        self.messages: dict
-        self.useless_storage: dict
+    @abstractmethod
+    async def send_or_update_log_message(
+        self,
+        guild: discord.Guild,
+        message_content: str,
+        message_to_update: Optional[discord.Message] = None,
+        *,
+        member: discord.Member = None,
+        file: discord.File = None,
+        embed: discord.Embed = None,
+    ):
+        raise NotImplemented()
+
+    @abstractmethod
+    def create_challenge_for(self, member: discord.Member):
+        raise NotImplemented()
+
+    @abstractmethod
+    def delete_challenge_for(self, member: Union[discord.Member, int]) -> bool:
+        raise NotImplemented()
+
+    @abstractmethod
+    def is_running_captcha(self, user_or_id: Union[discord.Member, int]):
+        raise NotImplemented()
+
+    @abstractmethod
+    def _initialize(self, send_patchnote: bool = True):
+        raise NotImplemented()
 
 
 class CompositeMetaClass(type(Cog), type(ABC)):
