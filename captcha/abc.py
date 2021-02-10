@@ -6,6 +6,8 @@ from redbot.core import Config
 from redbot.core.bot import Red
 from redbot.core.commands import Cog
 
+from .api import Challenge
+
 
 class MixinMeta(ABC):
     def __init__(self, *_args):
@@ -32,19 +34,47 @@ class MixinMeta(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def create_challenge_for(self, member: discord.Member):
+    async def create_challenge_for(self, member: discord.Member):
         raise NotImplementedError()
 
     @abstractmethod
-    def delete_challenge_for(self, member: Union[discord.Member, int]) -> bool:
+    async def delete_challenge_for(self, member: Union[discord.Member, int]) -> bool:
         raise NotImplementedError()
 
     @abstractmethod
-    def is_running_captcha(self, user_or_id: Union[discord.Member, int]):
+    def is_running_challenge(self, user_or_id: Union[discord.Member, int]):
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def give_temprole(self, member: discord.Member):
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def remove_temprole(self, member: discord.Member):
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def realize_challenge(self, challenge: Challenge) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def basic_check(self, member: discord.Member):
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def congratulation(self, challenge: Challenge, roles: list):
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def nicely_kick_user_from_challenge(self, challenge: Challenge, reason: str):
         raise NotImplementedError()
 
     @abstractmethod
     def _initialize(self, send_patchnote: bool = True):
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def _send_patchnote(self) -> None:
         raise NotImplementedError()
 
 

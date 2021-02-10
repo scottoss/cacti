@@ -1,19 +1,31 @@
 # Discord/Red related
-# from redbot.core import commands
-# from redbot.core.utils.chat_formatting import error
+import logging
 
 # Local
 from abc import ABCMeta
 
+from discord import Member
+from redbot.core import commands
+
 from .abc import MixinMeta
+
+# from redbot.core.utils.chat_formatting import error
+
+
+log = logging.getLogger("red.predeactor.captcha")
 
 
 class Listeners(MixinMeta, metaclass=ABCMeta):
-    pass
-    # @commands.Cog.listener()
-    # async def on_member_join(self, member: discord.Member):
-    #     await self.challenger(member)
-    #
+    @commands.Cog.listener()
+    async def on_member_join(self, member: Member):
+        allowed = await self.basic_check(member)
+        if allowed:
+            try:
+                challenge = await self.create_challenge_for(member)
+                await self.realize_challenge(challenge)
+            finally:
+                await self.delete_challenge_for(member)
+
     # @commands.Cog.listener()
     # async def on_member_remove(self, member: discord.Member):
     #     await self.do_possible_cleanup(member)

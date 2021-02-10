@@ -1,18 +1,23 @@
 import logging
+from contextlib import suppress
 from datetime import datetime
 from typing import Optional, Union
 
-import discapty
 import discord
 from redbot.core import Config, commands
 from redbot.core.bot import Red
-from redbot.core.utils.chat_formatting import bold, humanize_list
+from redbot.core.utils.chat_formatting import bold, error, humanize_list
 
 from .abc import CompositeMetaClass
-from .api import API
+from .api import Challenge
 from .commands import OwnerCommands, Settings
+from .errors import (
+    AlreadyHaveCaptchaError,
+    AskedForReload,
+    DeletedValueError,
+    MissingRequiredValueError,
+)
 from .events import Listeners
-from .errors import AlreadyHaveCaptchaError, MissingRequiredValueError, DeletedValueError
 from .informations import (
     __author__,
     __patchnote__,
@@ -24,13 +29,24 @@ DEFAULT_GLOBAL = {"log_level": 50}
 DEFAULT_GUILD = {
     "channel": None,  # The channel where the captcha is sent.
     "logschannel": None,  # Where logs are sent.
-    "enabled": False,  # if challenges must be activated.
+    "enabled": False,  # If challenges must be activated.
     "autoroles": [],  # Roles to give.
     "temprole": None,  # Temporary role to give.
     "type": "plain",  # Captcha type.
     "timeout": 5,  # Time in minutes before kicking.
+    "retry": 3,  # The numnber of retry allowed.
 }
 log = logging.getLogger("red.predeactor.captcha")
+
+
+def build_kick_embed(guild: discord.Guild, reason: str):
+    embed = discord.Embed(
+        title=f"You have been kicked from {guild.name}.",
+        description="",
+        color=discord.Colour.red().value,
+    )
+    embed.add_field(name="Reason:", value=reason)
+    return embed
 
 
 class Captcha(
@@ -54,7 +70,6 @@ class Captcha(
         self.data.register_guild(**DEFAULT_GUILD)
 
         self.running = {}
-        self.api = API(self.bot, self.data)
 
         self.version = __version__
         self.patchnote = __patchnote__
@@ -66,10 +81,12 @@ class Captcha(
         message_content: str,
         message_to_update: Optional[discord.Message] = None,
         *,
+        allowed_tries: tuple = None,
         member: discord.Member = None,
         file: discord.File = None,
         embed: discord.Embed = None,
-    ) -> discord.Message:
+        ignore_error: bool = True,
+    ) -> Optional[discord.Message]:
         """
         Send a message or update one in the log channel.
         """
@@ -77,10 +94,16 @@ class Captcha(
         content = ""
         if message_to_update:
             content += message_to_update.content + "\n"
-        content += f"{bold(str(time))}{f' {member.mention}' if member else ''}: {message_content}"
+        content += (
+            f"{bold(str(time))}{f' {member.mention}' if member else ''}"
+            f"{f' ({allowed_tries[0]}/{allowed_tries[1]})' if allowed_tries else ''}: "
+            f"{message_content}"
+        )
 
         log_channel_id: Union[int, None] = await self.data.guild(guild).logschannel()
         if not log_channel_id:
+            if ignore_error:
+                return None
             raise MissingRequiredValueError("Missing logging channel ID.")
 
         log_channel: discord.TextChannel = self.bot.get_channel(log_channel_id)
@@ -101,29 +124,197 @@ class Captcha(
             )
         raise DeletedValueError("Logging channel may have been deleted.")
 
-    async def create_challenge_for(self, member: discord.Member) -> discapty.Captcha:
+    async def create_challenge_for(self, member: discord.Member) -> Challenge:
         """
         Create a Challenge class for an user and append it to the running challenges.
         """
         if member.id in self.running:
             raise AlreadyHaveCaptchaError("The user already have a captcha object running.")
-        captcha_type = await self.config.guild(member.guild).type()
-        captcha = discapty.Captcha(captcha_type)
+        captcha = Challenge(self.bot, member, await self.data.guild(member.guild).all())
         self.running[member.id] = captcha
         return captcha
 
-    def delete_challenge_for(self, member: Union[discord.Member, int]) -> bool:
-        if isinstance(member, discord.Member):
-            member = member.id
-        if member in self.running:
+    async def delete_challenge_for(self, member: discord.Member) -> bool:
+        try:
             del self.running[member.id]
             return True
-        return False
+        except KeyError:
+            return False
 
-    def is_running_captcha(self, user_or_id: Union[discord.Member, int]) -> bool:
+    def is_running_challenge(self, user_or_id: Union[discord.Member, int]) -> bool:
         if isinstance(user_or_id, discord.Member):
             user_or_id = int(user_or_id.id)
         return user_or_id in self.running
+
+    async def give_temprole(self, challenge: Challenge):
+        temprole = challenge.config["temprole"]
+        try:
+            await challenge.member.add_roles(
+                challenge.guild.get_role(temprole), reason="Beginning Captcha challenge."
+            )
+        except discord.Forbidden:
+            raise PermissionError('Bot miss the "manage_roles" permission.')
+
+    async def remove_temprole(self, challenge: Challenge):
+        temprole = challenge.config["temprole"]
+        try:
+            await challenge.member.remove_roles(
+                challenge.guild.get_role(temprole), reason="Finishing Captcha challenge."
+            )
+        except discord.Forbidden:
+            raise PermissionError('Bot miss the "manage_roles" permission.')
+
+    async def realize_challenge(self, challenge: Challenge):
+        # Seems to be the last goddamn function I'll be writing...
+        limit = await self.data.guild(challenge.member.guild).retry()
+        is_ok = None
+        timeout = False
+        try:
+            await self.give_temprole(challenge)
+        except PermissionError:
+            print("ALERT!")  # We stay shut on this one!
+        try:
+            while is_ok is not True:
+                if challenge.trynum > limit:
+                    break
+                try:
+                    this = await challenge.try_challenging()
+                except TimeoutError:
+                    timeout = True
+                    break
+                except AskedForReload:
+                    challenge.trynum += 1
+                    continue
+                except TypeError:
+                    # In this error, the user reacted with an invalid (Most probably custom)
+                    # emoji. While I expect administrator to remove this permissions, I still
+                    # need to handle, so we're fine if we don't increase trynum.
+                    continue
+                if this is False:
+                    challenge.trynum += 1
+                    try:
+                        await challenge.messages["answer"].delete()
+                    except discord.Forbidden:
+                        await self.send_or_update_log_message(
+                            challenge.guild,
+                            error(bold("Unable to delete member's answer.")),
+                            challenge.messages.get("logs"),
+                            member=challenge.member,
+                        )
+                    is_ok = False
+                else:
+                    is_ok = True
+
+            failed = challenge.trynum > limit
+            logmsg = challenge.messages["logs"]
+
+            if failed or timeout:
+                reason = (
+                    "Retried the captcha too many time."
+                    if failed
+                    else "Didn't answer to the challenge."
+                )
+                try:
+                    await self.nicely_kick_user_from_challenge(challenge, reason)
+                    await self.send_or_update_log_message(
+                        challenge.guild,
+                        bold(f"User kicked for reason: {reason}"),
+                        logmsg,
+                        member=challenge.member,
+                    )
+                except PermissionError:
+                    await self.send_or_update_log_message(
+                        challenge.guild,
+                        error(bold("Permission missing for kicking member!")),
+                        logmsg,
+                        member=challenge.member,
+                    )
+                return
+
+            roles = [
+                challenge.guild.get_role(role)
+                for role in await self.data.guild(challenge.guild).autoroles()
+            ]
+            try:
+                await self.congratulation(challenge, *roles)
+                await self.remove_temprole(challenge)
+                await self.send_or_update_log_message(
+                    challenge.guild,
+                    bold("Roles added, Captcha passed."),
+                    logmsg,
+                    member=challenge.member,
+                )
+            except PermissionError:
+                roles_name = [role.name for role in roles]
+                try:
+                    await challenge.member.send(
+                        f"Please contact the administrator of {challenge.guild.name} for obtaining "
+                        "access of the server, I was unable to add you the roles on the server.\nYou "
+                        f"should have obtained the following roles: "
+                        f"{humanize_list(roles_name) if roles_name else 'None.'}"
+                    )
+                except discord.Forbidden:
+                    await challenge.channel.send(
+                        challenge.member.mention
+                        + ": "
+                        + f"Please contact the administrator of {challenge.guild.name} for obtaining "
+                        "access of the server, I was unable to add you the roles on the server.\nYou "
+                        f"should have obtained the following roles: "
+                        f"{humanize_list(roles_name) if roles_name else 'None.'}",
+                        delete_after=10,
+                    )
+                await self.send_or_update_log_message(
+                    challenge.guild,
+                    error(bold("Permission missing for giving roles! Member alerted.")),
+                    logmsg,
+                    member=challenge.member,
+                )
+
+        finally:
+            try:
+                await challenge.cleanup_messages()
+            except PermissionError:
+                await self.send_or_update_log_message(
+                    challenge.guild,
+                    error(bold("Missing permissions for deleting all messages for verification!")),
+                    challenge.messages.get("logs"),
+                    member=challenge.member,
+                )
+
+    # PLEASE DON'T TOUCH THOSE FUNCTIONS WITH YOUR COG. Thanks. - Pred
+
+    async def basic_check(self, member: discord.Member):
+        """
+        Check the basis from a member; used when a member join the server.
+        """
+        return await self.data.guild(member.guild).enabled()
+
+    async def congratulation(self, challenge: Challenge, roles: list):
+        """
+        Congrats to a member! He finished the captcha!
+        """
+        if not challenge.channel.permissions_for(
+            self.bot.get_guild(challenge.guild.id).me
+        ).manage_roles:
+            raise PermissionError('Bot miss the "manage_roles" permission.')
+
+        await challenge.member.add_roles(roles, reason="Passed Captcha successfully.")
+
+    async def nicely_kick_user_from_challenge(self, challenge: Challenge, reason: str):
+        # We're gonna check our permission first, to avoid DMing the user for nothing.
+
+        if not challenge.channel.permissions_for(
+            self.bot.get_guild(challenge.guild.id).me
+        ).kick_members:
+            raise PermissionError('Bot miss the "kick_members" permission.')
+
+        with suppress(discord.Forbidden):
+            await challenge.member.send(embed=build_kick_embed(challenge.guild, reason))
+        try:
+            await challenge.guild.kick(challenge.member, reason=reason)
+        except discord.Forbidden:
+            raise PermissionError("Unable to kick member.")
+        return True
 
     def format_help_for_context(self, ctx: commands.Context) -> str:
         """

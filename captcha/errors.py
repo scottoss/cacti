@@ -27,3 +27,9 @@ class MissingRequiredValueError(Exception):
     """An error raised in case the guild is missing an option that must be configured."""
 
     pass
+
+
+class LeftServerError(Exception):
+    """An error raised in case the user left the server while challenging."""
+
+    pass

@@ -4,14 +4,17 @@ from typing import Union
 
 import discapty
 import discord
-from redbot.core import Config
 from redbot.core.bot import Red
 from redbot.core.utils import chat_formatting as form
 from redbot.core.utils.predicates import MessagePredicate, ReactionPredicate
 
-from .errors import MissingRequiredValueError, AskedForReload
+from .errors import AskedForReload, MissingRequiredValueError
 
 log = logging.getLogger("red.predeactor.captcha")
+
+
+def ok_check(msg: str):
+    return f"✅ {msg}"
 
 
 class Challenge:
@@ -30,23 +33,29 @@ class Challenge:
             self.config["channel"]
         )
 
-        self.type = self.config["type"]
+        self.type: str = self.config["type"]
 
-        self.messages = dict()
+        self.messages: dict = dict()
         # bot_challenge: Message send for the challenge, contain captcha.
-        # logs: The message that has been sent in the logging channel
+        # logs: The message that has been sent in the logging channel.
+        # answer: Member's answer to captcha, may or may not exist.
+        self.log = bot.get_cog("Captcha").send_or_update_log_message
 
-        self.running = False
-        self.tasks = []
+        self.running: bool = False
+        self.tasks: list = []
+        self.limit: int = self.config["retry"]
+        self.trynum: int = 0
 
-        self.captcha = discapty.Captcha(self.type)
+        self.captcha: discapty.Captcha = discapty.Captcha(self.type)
 
     async def try_challenging(self) -> bool:
         """Do challenging in one function!
 
+        This auto reload the captcha if needed.
         This does not try to get errors.
         This does not gives role.
         """
+
         if self.running is True:
             raise OverflowError("A Challenge is already running.")
 
@@ -56,10 +65,19 @@ class Challenge:
             await self.send_basics()
 
         self.running = True
+        self.messages["logs"] = logmsg = await self.log(
+            self.guild,
+            form.info("The member started the challenge."),
+            self.messages.get("logs", None),
+            allowed_tries=(self.trynum, self.limit),
+            member=self.member,
+        )
 
         try:
             received = await self.wait_for_action()
             if hasattr(received, "content"):
+                # It's a message!
+                self.messages["answer"] = received
                 error_message = ""
                 try:
                     state = await self.verify(received.content)
@@ -67,31 +85,56 @@ class Challenge:
                     error_message += form.error(form.bold("Code invalid. Do not copy and paste."))
                     state = False
                 else:
-                    error_message += form.warning("Code invalid.")
-                await self.channel.send(error_message, delete_after=3)
+                    if state is False:
+                        error_message += form.warning("Code invalid.")
+                if error_message:
+                    await self.channel.send(error_message, delete_after=3)
+                    await self.log(
+                        self.guild,
+                        form.error("User sent an invalid code."),
+                        logmsg,
+                        allowed_tries=(self.trynum, self.limit),
+                        member=self.member,
+                    )
             else:
+                await self.log(
+                    self.guild,
+                    "🔁 User reloaded captcha.",
+                    logmsg,
+                    allowed_tries=(self.trynum, self.limit),
+                    member=self.member,
+                )
                 raise AskedForReload("User want to reload Captcha.")
         finally:
             self.running = False
+        if state:
+            await self.log(
+                self.guild, ok_check("User passed captcha."), logmsg, member=self.member
+            )
         return state
 
     async def send_basics(self) -> None:
-        """Send the first messages."""
+        """
+        Send the message containing the captcha code.
+        """
         if self.messages.get("bot_challenge"):
             raise OverflowError("Use 'Challenge.reload' to create another code.")
 
         embed_and_file = await self.captcha.generate_embed(
             guild_name=self.guild.name,
             author={"name": f"Captcha for {self.member.name}", "url": self.member.avatar_url},
+            footer={"text": f"Tries: {self.trynum} / Limit: {self.limit}"},
             title=f"{self.guild.name} Verification System",
             description=(
-                "Please return me the code on the following image. The code is made of 8"
+                "Please return me the code on the following image. The code is made of 8 "
                 "characters."
             ),
         )
 
         try:
+            await asyncio.sleep(1)
             bot_message: discord.Message = await self.channel.send(
+                content=self.member.mention,
                 embed=embed_and_file["embed"],
                 file=embed_and_file["image"],
                 delete_after=900,  # Delete after 15 minutes.
@@ -126,6 +169,9 @@ class Challenge:
             return None
 
     async def reload(self) -> None:
+        """
+        Resend another message with another code.
+        """
         if not self.messages.get("bot_challenge", None):
             raise AttributeError(
                 "There is not message to reload. Use 'Challenge.send_basics' first."
@@ -145,8 +191,9 @@ class Challenge:
         embed_and_file = await self.captcha.generate_embed(
             guild_name=self.guild.name,
             title="{guild} Verification System".format(guild=self.guild.name),
+            footer={"text": f"Tries: {self.trynum} / Limit: {self.limit}"},
             description=(
-                "Please return me the code on the followiing image. The code is made of 8"
+                "Please return me the code on the followiing image. The code is made of 8 "
                 "characters."
             ),
         )
@@ -176,7 +223,34 @@ class Challenge:
             if not task.done():
                 task.cancel()
 
+    async def cleanup_messages(self) -> bool:
+        """
+        Remove every stocked messages.
+
+        Return a boolean, if the deletion was successful.
+        """
+        errored = False
+        for message in self.messages.items():
+            message[0]: str
+            message[1]: discord.Message
+            if message[0] == "bot_challenge":
+                self.cancel_tasks()
+            if message[0] == "logs":
+                # We don't want to delete logs.
+                continue
+            try:
+                await message[1].delete()
+                del message
+            except discord.Forbidden:
+                raise PermissionError("Cannot delete message.")
+            except discord.HTTPException:
+                errored = True
+        return True if not errored else False
+
     def _give_me_tasks(self) -> list:
+        def leave_check(u):
+            return u.id == self.member.id
+
         return [
             asyncio.create_task(
                 self.bot.wait_for(
@@ -195,6 +269,7 @@ class Challenge:
                     ),
                 )
             ),
+            asyncio.create_task(self.bot.wait_for("user_remove", check=leave_check)),
         ]
 
 
@@ -210,37 +285,3 @@ class Challenge:
 #     @commands.Cog.listener()
 #     async def on_predeactor_captcha_ask_reload(self, captcha_class: Challenge):
 #         pass
-
-
-class API:
-    def __init__(self, bot: Red, config: Config):
-        self.bot = bot
-        self.config = config
-        self.challenge = {}
-
-    async def generate_image_for_guild(self, guild: discord.Guild, *, code: str = None):
-        captcha_type = await self.config.guild(guild).type()
-        captcha = discapty.Captcha(captcha_type)
-        return captcha.generate_captcha(code)
-
-    async def generate_captcha_object_for_member(self, member: discord.Member):
-        """
-        Create a Captcha object for a member, append it to the API's queue and return it.
-        """
-        captcha_type = await self.config.guild(member.guild).type()
-        captcha = discapty.Captcha(captcha_type)
-        self.challenge[member.id] = captcha
-        return captcha
-
-    async def delete_member_in_queue(self, member: discord.Member):
-        """
-        Delete the user in the API's queue.
-        """
-        if member.id in self.challenge:
-            del self.challenge[member.id]
-
-    async def get_users_in_challenge(self):
-        """
-        Return a list of users ID that are actually having a challenge.
-        """
-        return [int(u) for u in self.challenge.keys()]

@@ -5,9 +5,9 @@ from typing import Union
 # Discord/Red related
 import discord
 import redbot.core.utils.chat_formatting as form
-from redbot.core.utils.predicates import ReactionPredicate
-from redbot.core.utils.menus import start_adding_reactions
 from redbot.core import commands
+from redbot.core.utils.menus import start_adding_reactions
+from redbot.core.utils.predicates import ReactionPredicate
 
 # Local
 from ..abc import MixinMeta
@@ -157,7 +157,9 @@ class Settings(MixinMeta, metaclass=ABCMeta):
         )
 
     @config.command(name="temprole", usage="<temporary_role_or_'none'>")
-    async def temporary_role_setter(self, ctx: commands.Context, *, role: Union[discord.Role, str]):
+    async def temporary_role_setter(
+        self, ctx: commands.Context, *, role: Union[discord.Role, str]
+    ):
         """
         Give a temporary role when initilalizing the captcha challenge.
 
@@ -171,13 +173,23 @@ class Settings(MixinMeta, metaclass=ABCMeta):
                 await self.data.guild(ctx.guild).temprole.clear()
                 await ctx.send("Cleared! Don't grin like that.")
             else:
-                await ctx.send('Converting to "discord.Role" or "str" failed for parameter "role".')
+                await ctx.send(
+                    'Converting to "discord.Role" or "str" failed for parameter "role".'
+                )
                 # EEEHHHH C'EST LE DAB DU J'M'EN BAT ROYAL LES COUILLES
             return
         await self.data.guild(ctx.guild).temprole.set(role.id)
         await ctx.send(
             form.info(form.bold("Temporary role registered: {role}".format(role=role.name)))
         )
+
+    @config.command(name="allowedretries", usage="<number_of_retry>")
+    async def retries_setter(self, ctx: commands.Context, number_of_retries: int):
+        """
+        Set the number of retries allowed before getting kicked.
+        """
+        await self.data.guild(ctx.guild).retry.set(number_of_retries)
+        await ctx.send(f"Alright, it's been set to {str(number_of_retries)}")
 
     # Taken from my logic at
     # https://github.com/SharkyTheKing/Sharky/blob/master/verify/verification.py#L163, thank buddy

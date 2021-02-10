@@ -1,8 +1,6 @@
 import discord
 from discord.ext.commands import BadArgument
-
 from redbot.core import commands
-
 
 # A logic from Trusty-Cogs, thank you!
 # https://github.com/TrustyJAID/Trusty-cogs/blob/master/roletools/converter.py#L29
