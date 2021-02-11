@@ -1,6 +1,7 @@
 # Builtin or Pip
 from abc import ABCMeta
-from typing import Union
+from time import sleep
+from typing import List, Union
 
 # Discord/Red related
 import discord
@@ -12,6 +13,43 @@ from redbot.core.utils.predicates import ReactionPredicate
 # Local
 from ..abc import MixinMeta
 from ..converters import RoleConverter
+
+
+async def build_embed_with_missing_permissions(permissions: List[str]):
+    embed = discord.Embed(
+        title="Missing required permissions.",
+        description=(
+            form.warning(
+                "In order to allow to set this parameter, you must give the bot the following "
+                "permissions."
+            )
+        ),
+        colour=discord.Colour.red().value,
+    )
+    strmissing = str()
+    for perm in permissions:
+        strmissing += "".join(("\n", form.inline(perm.replace("_", " ").capitalize())))
+    embed.add_field(
+        name=f"Missing permission{'s' if len(permissions) > 1 else ''}:", value=strmissing
+    )
+    return embed
+
+
+async def build_embed_with_missing_settings(settings: List[str]):
+    embed = discord.Embed(
+        title="Missing required settings.",
+        description=(
+            form.warning(
+                "In order to allow to set this parameter, you must set the following settings."
+            )
+        ),
+        colour=discord.Colour.red().value,
+    )
+    strmissing = str()
+    for setting in settings:
+        strmissing += "".join(("\n", form.inline(setting.replace("_", " ").capitalize())))
+    embed.add_field(name=f"Missing setting{'s' if len(settings) > 1 else ''}:", value=strmissing)
+    return embed
 
 
 class Settings(MixinMeta, metaclass=ABCMeta):
@@ -26,6 +64,8 @@ class Settings(MixinMeta, metaclass=ABCMeta):
     async def config(self, ctx: commands.GuildContext):
         """Configure Captcha in your server."""
         pass
+
+    config: commands.Group
 
     @config.command(name="channel", usage="<destination = text_channel_or_'dm'>")
     async def challenge_channel(
@@ -47,6 +87,23 @@ class Settings(MixinMeta, metaclass=ABCMeta):
                     )
                 )
             )
+            return
+
+        if needperm := await self.check_permissions_in_channel(
+            [
+                "add_reactions",
+                "embed_links",
+                "kick_members",
+                "manage_messages",
+                "read_messages",
+                "read_message_history",
+                "send_messages",
+                "manage_roles",
+                "attach_files",
+            ],
+            destination,
+        ):
+            await ctx.send(embed=await build_embed_with_missing_permissions(needperm))
             return
 
         await self.data.guild(ctx.guild).channel.set(
@@ -83,6 +140,18 @@ class Settings(MixinMeta, metaclass=ABCMeta):
             await ctx.send(form.info("Logging channel removed."))
             return
 
+        if needperm := await self.check_permissions_in_channel(
+            [
+                "read_messages",
+                "read_message_history",
+                "send_messages",
+                "attach_files",
+            ],
+            destination,
+        ):
+            await ctx.send(embed=await build_embed_with_missing_permissions(needperm))
+            return
+
         await self.data.guild(ctx.guild).logschannel.set(destination.id)
         await ctx.send(
             form.info("Logging channel registered: {chan}.".format(chan=destination.mention))
@@ -95,12 +164,34 @@ class Settings(MixinMeta, metaclass=ABCMeta):
         Use `True` (Or `yes`) to enable or `False` (or `no`) to disable.
         Users won't be challenged and will not receive any temporary role if disabled.
         """
+        config = await self.data.guild(ctx.guild).all()
 
-        actual_state = await self.data.guild(ctx.guild).enabled()
+        if config["channel"] is None:
+            await ctx.send(embed=await build_embed_with_missing_settings(["channel"]))
+            return
+
+        actual_state = config["enabled"]
         if actual_state is state:
             await ctx.send(
                 form.warning(form.bold("Captcha is already set on {stat}.".format(stat=state)))
             )
+            return
+
+        if needperm := await self.check_permissions_in_channel(
+            [
+                "add_reactions",
+                "embed_links",
+                "kick_members",
+                "manage_messages",
+                "read_messages",
+                "read_message_history",
+                "send_messages",
+                "manage_roles",
+                "attach_files",
+            ],
+            self.bot.get_channel(config["channel"]),
+        ):
+            await ctx.send(embed=await build_embed_with_missing_permissions(needperm))
             return
 
         await self.data.guild(ctx.guild).enabled.set(state)
@@ -178,6 +269,18 @@ class Settings(MixinMeta, metaclass=ABCMeta):
                 )
                 # EEEHHHH C'EST LE DAB DU J'M'EN BAT ROYAL LES COUILLES
             return
+
+        if needperm := await self.check_permissions_in_channel(["manage_roles"], ctx.channel):
+            await ctx.send(embed=await build_embed_with_missing_permissions(needperm))
+            return
+
+        if role.position >= ctx.me.top_role.position:
+            await ctx.send("This role is higher than my highest role in the discord hierarchy.")
+            return
+        if role.position >= ctx.author.top_role.position:
+            await ctx.send("This role is higher than your own in the discord hierarchy.")
+            return
+
         await self.data.guild(ctx.guild).temprole.set(role.id)
         await ctx.send(
             form.info(form.bold("Temporary role registered: {role}".format(role=role.name)))
@@ -195,12 +298,16 @@ class Settings(MixinMeta, metaclass=ABCMeta):
     # https://github.com/SharkyTheKing/Sharky/blob/master/verify/verification.py#L163, thank buddy
     # What the f*ck do you mean I'm lazy? Dude I made 3/4 of the cog and logic in less a week, I
     # deserve understanding what sleep schedule mean!
-    @config.group()
+
+    @config.group(invoke_without_command=True)
     async def autorole(self, ctx: commands.GuildContext):
         """
         Set the roles to give when passing the captcha.
         """
-        pass
+        if needperm := await self.check_permissions_in_channel(["manage_roles"], ctx.channel):
+            await ctx.send(embed=await build_embed_with_missing_permissions(needperm))
+            return False
+        await ctx.send_help()
 
     @autorole.command(name="add")
     async def add_roles(self, ctx: commands.Context, *roles: discord.Role):
@@ -209,12 +316,31 @@ class Settings(MixinMeta, metaclass=ABCMeta):
 
         Use double quotes if the role contains spaces.
         """
+        if not roles:
+            await ctx.send_help()
+            return
+        if needperm := await self.check_permissions_in_channel(["manage_roles"], ctx.channel):
+            await ctx.send(embed=await build_embed_with_missing_permissions(needperm))
+            return
+
+        await ctx.send("Invoked.")
         message = ""
         added = []
         already_added = []
+        error = {}
 
         for role in roles:
             async with self.data.guild(ctx.guild).autoroles() as roles_list:
+                if role.position >= ctx.me.top_role.position:
+                    error[
+                        role.name
+                    ] = "This role is higher than my highest role in the role hierarchy."
+                    continue
+                if role.position >= ctx.author.top_role.position:
+                    error[
+                        role.name
+                    ] = "This role is higher than your own in the discord hierarchy."
+                    continue
                 if role.id not in roles_list:
                     roles_list.append(role.id)
                     added.append(role.name)
@@ -227,24 +353,39 @@ class Settings(MixinMeta, metaclass=ABCMeta):
             message += "\nRole(s) already added: {roles}".format(
                 roles=form.humanize_list(already_added)
             )
+        if error:
+            message += "\nCannot add the following role(s)"
+            for role in error.items():
+                message += "\n{rolename}: {reason}".format(rolename=role[0], reason=role[1])
         if message:
             for line in form.pagify(message):
                 await ctx.send(line)
 
     @autorole.command(name="remove", aliases=["delete", "rm"])
-    async def remove_roles(self, ctx: commands.Context, *roles: RoleConverter):
+    async def remove_roles(self, ctx: commands.Context, *roles: discord.Role):
         """Remove a role to give.
         You can give more than one role to add.
         """
         if not roles:
-            return await ctx.send_help()
+            await ctx.send_help()
+            return
+        if needperm := await self.check_permissions_in_channel(["manage_roles"], ctx.channel):
+            await ctx.send(embed=await build_embed_with_missing_permissions(needperm))
+            return
 
+        await ctx.send("Invoked.")
         message = ""
         removed = []
         not_found = []
+        error = {}
 
         async with self.data.guild(ctx.guild).autoroles() as roles_list:
             for role in roles:
+                if role.position >= ctx.author.top_role.position:
+                    error[
+                        role.name
+                    ] = "This role is higher than your own in the discord hierarchy."
+                    continue
                 if role.id in roles_list:
                     roles_list.remove(role.id)
                     removed.append(role.name)
@@ -259,6 +400,10 @@ class Settings(MixinMeta, metaclass=ABCMeta):
             message += "\nRole(s) remove from autorole list: {roles}".format(
                 roles=form.humanize_list(removed)
             )
+        if error:
+            message += "\nCannot remove the following role(s)"
+            for role in error.items():
+                message += "\n{rolename}: {reason}".format(rolename=role[0], reason=role[1])
         if message:
             for line in form.pagify(message):
                 await ctx.send(line)

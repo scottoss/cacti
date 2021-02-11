@@ -1,5 +1,5 @@
 __author__ = ["Predeactor"]
-__version__ = "Beta 1"
+__version__ = "Beta 2"
 
 __patchnote__ = (
     "***HHHHEEELLLLLLLLOOOOO USER!*** Thank for installing my new Captcha cog!\n"
@@ -46,8 +46,7 @@ __OLD_PATCHNOTES__ = {
         "amazing functionallity goes back to calebj, creator of the Captcha cog for Red V2, which "
         "had the same thing, I got inspired of it and copied some code. Thank you!\n\n"
         "AH yes, cog's stability, it is now WAY more stable than before, and way more efficient and "
-        "easier to maintain. It also include a brand new API for developers, even if I doubt it's "
-        "gonna be useful. (Ok it was mainly for me ngl \N{UPSIDE-DOWN FACE})\n\n"
+        "easier to maintain. \N{UPSIDE-DOWN FACE}\n\n"
         "I really hope you'll enjoy this cog. Again, if you wish to support me, there's my Paypal "
         "<https://www.paypal.me/predeactor>, Ko-fi <https://ko-fi.com/predeactor> and Patreon for "
         "montly support <https://www.patreon.com/predeactor>."

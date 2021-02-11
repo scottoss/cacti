@@ -6,18 +6,15 @@ from abc import ABCMeta
 
 from discord import Member
 from redbot.core import commands
+from redbot.core.utils.chat_formatting import bold
 
 from .abc import MixinMeta
-
-# from redbot.core.utils.chat_formatting import error
-
 
 log = logging.getLogger("red.predeactor.captcha")
 
 
 class Listeners(MixinMeta, metaclass=ABCMeta):
-    @commands.Cog.listener()
-    async def on_member_join(self, member: Member):
+    async def runner(self, member: Member):
         allowed = await self.basic_check(member)
         if allowed:
             try:
@@ -26,14 +23,28 @@ class Listeners(MixinMeta, metaclass=ABCMeta):
             finally:
                 await self.delete_challenge_for(member)
 
-    # @commands.Cog.listener()
-    # async def on_member_remove(self, member: discord.Member):
-    #     await self.do_possible_cleanup(member)
-    #
-    # @commands.Cog.listener()
-    # async def on_member_captcha_passed(self):
-    #     pass
-    #
+    async def cleaner(self, member: Member):
+        if self.is_running_challenge(member):
+            try:
+                challenge = self.obtain_challenge(member)
+                await challenge.cleanup_messages()
+                await self.send_or_update_log_message(
+                    challenge.guild,
+                    bold("User has left the server."),
+                    challenge.messages["logs"],
+                    member=challenge.member,
+                )
+            finally:
+                await self.delete_challenge_for(member)
+
+    @commands.Cog.listener()
+    async def on_member_join(self, member: Member):
+        await self.runner(member)
+
+    @commands.Cog.listener()
+    async def on_member_remove(self, member: Member):
+        await self.cleaner(member)
+
     # @commands.command(name="testing")
     # @commands.is_owner()
     # async def challenge(self, ctx: commands.Context, member: discord.Member):

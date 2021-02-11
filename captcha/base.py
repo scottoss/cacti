@@ -1,7 +1,7 @@
 import logging
 from contextlib import suppress
 from datetime import datetime
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 import discord
 from redbot.core import Config, commands
@@ -15,6 +15,7 @@ from .errors import (
     AlreadyHaveCaptchaError,
     AskedForReload,
     DeletedValueError,
+    LeftServerError,
     MissingRequiredValueError,
 )
 from .events import Listeners
@@ -124,6 +125,17 @@ class Captcha(
             )
         raise DeletedValueError("Logging channel may have been deleted.")
 
+    @staticmethod
+    async def check_permissions_in_channel(permissions: List[str], channel: discord.TextChannel):
+        """Function to checks if the permissions are available in a guild.
+        This will return a list of the missing permissions.
+        """
+        missing_perm = []
+        for permission in permissions:
+            if not getattr(channel.permissions_for(channel.guild.me), permission):
+                missing_perm.append(permission)
+        return missing_perm
+
     async def create_challenge_for(self, member: discord.Member) -> Challenge:
         """
         Create a Challenge class for an user and append it to the running challenges.
@@ -141,10 +153,17 @@ class Captcha(
         except KeyError:
             return False
 
-    def is_running_challenge(self, user_or_id: Union[discord.Member, int]) -> bool:
-        if isinstance(user_or_id, discord.Member):
-            user_or_id = int(user_or_id.id)
-        return user_or_id in self.running
+    def is_running_challenge(self, member_or_id: Union[discord.Member, int]) -> bool:
+        if isinstance(member_or_id, discord.Member):
+            member_or_id = int(member_or_id.id)
+        return member_or_id in self.running
+
+    def obtain_challenge(self, member_or_id: Union[discord.Member, int]) -> Challenge:
+        if isinstance(member_or_id, discord.Member):
+            member_or_id = int(member_or_id.id)
+        if not self.is_running_challenge(member_or_id):
+            raise KeyError("User is not challenging any Captcha.")
+        return self.running[member_or_id]
 
     async def give_temprole(self, challenge: Challenge):
         temprole = challenge.config["temprole"]
@@ -185,6 +204,8 @@ class Captcha(
                 except AskedForReload:
                     challenge.trynum += 1
                     continue
+                except LeftServerError:
+                    return False
                 except TypeError:
                     # In this error, the user reacted with an invalid (Most probably custom)
                     # emoji. While I expect administrator to remove this permissions, I still
@@ -229,7 +250,7 @@ class Captcha(
                         logmsg,
                         member=challenge.member,
                     )
-                return
+                return True
 
             roles = [
                 challenge.guild.get_role(role)
@@ -280,22 +301,21 @@ class Captcha(
                     challenge.messages.get("logs"),
                     member=challenge.member,
                 )
-
-    # PLEASE DON'T TOUCH THOSE FUNCTIONS WITH YOUR COG. Thanks. - Pred
-
-    async def basic_check(self, member: discord.Member):
-        """
-        Check the basis from a member; used when a member join the server.
-        """
-        return await self.data.guild(member.guild).enabled()
+        return True
 
     async def congratulation(self, challenge: Challenge, roles: list):
         """
         Congrats to a member! He finished the captcha!
         """
-        if not challenge.channel.permissions_for(
-            self.bot.get_guild(challenge.guild.id).me
-        ).manage_roles:
+        # Admin may have set channel to be DM, checking for manage_roles is useless since
+        # it always return False, instead, we're taking a random text channel of the guild
+        # to check our permission for kicking.
+        channel = (
+            challenge.channel
+            if not isinstance(challenge.channel, discord.DMChannel)
+            else challenge.guild.text_channels[0]
+        )
+        if not channel.permissions_for(self.bot.get_guild(challenge.guild.id).me).manage_roles:
             raise PermissionError('Bot miss the "manage_roles" permission.')
 
         await challenge.member.add_roles(roles, reason="Passed Captcha successfully.")
@@ -303,9 +323,15 @@ class Captcha(
     async def nicely_kick_user_from_challenge(self, challenge: Challenge, reason: str):
         # We're gonna check our permission first, to avoid DMing the user for nothing.
 
-        if not challenge.channel.permissions_for(
-            self.bot.get_guild(challenge.guild.id).me
-        ).kick_members:
+        # Admin may have set channel to be DM, checking for kick_members is useless since
+        # it always return False, instead, we're taking a random text channel of the guild
+        # to check our permission for kicking.
+        channel = (
+            challenge.channel
+            if not isinstance(challenge.channel, discord.DMChannel)
+            else challenge.guild.text_channels[0]
+        )
+        if not channel.permissions_for(self.bot.get_guild(challenge.guild.id).me).kick_members:
             raise PermissionError('Bot miss the "kick_members" permission.')
 
         with suppress(discord.Forbidden):
@@ -315,6 +341,15 @@ class Captcha(
         except discord.Forbidden:
             raise PermissionError("Unable to kick member.")
         return True
+
+    # PLEASE DON'T TOUCH THOSE FUNCTIONS WITH YOUR COG OR EVAL. Thanks. - Pred
+    # Those should only be used by the cog - 4 bags of None of your business.
+
+    async def basic_check(self, member: discord.Member):
+        """
+        Check the basis from a member; used when a member join the server.
+        """
+        return await self.data.guild(member.guild).enabled()
 
     def format_help_for_context(self, ctx: commands.Context) -> str:
         """

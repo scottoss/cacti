@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 import discord
 from redbot.core import Config
@@ -33,6 +33,11 @@ class MixinMeta(ABC):
     ):
         raise NotImplementedError()
 
+    @staticmethod
+    @abstractmethod
+    async def check_permissions_in_channel(permissions: List[str], channel: discord.TextChannel):
+        raise NotImplementedError()
+
     @abstractmethod
     async def create_challenge_for(self, member: discord.Member):
         raise NotImplementedError()
@@ -42,7 +47,11 @@ class MixinMeta(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def is_running_challenge(self, user_or_id: Union[discord.Member, int]):
+    def is_running_challenge(self, member_or_id: Union[discord.Member, int]):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def obtain_challenge(self, member_or_id: Union[discord.Member, int]) -> Challenge:
         raise NotImplementedError()
 
     @abstractmethod

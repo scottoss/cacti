@@ -8,7 +8,7 @@ from redbot.core.bot import Red
 from redbot.core.utils import chat_formatting as form
 from redbot.core.utils.predicates import MessagePredicate, ReactionPredicate
 
-from .errors import AskedForReload, MissingRequiredValueError
+from .errors import AskedForReload, LeftServerError, MissingRequiredValueError
 
 log = logging.getLogger("red.predeactor.captcha")
 
@@ -29,8 +29,10 @@ class Challenge:
 
         if not self.config["channel"]:
             raise MissingRequiredValueError("Missing channel for verification.")
-        self.channel: Union[discord.TextChannel, discord.DMChannel] = bot.get_channel(
-            self.config["channel"]
+        self.channel: Union[discord.TextChannel, discord.DMChannel] = (
+            bot.get_channel(self.config["channel"])
+            if self.config.get("channel") != "dm"
+            else self.member.dm_channel
         )
 
         self.type: str = self.config["type"]
@@ -75,6 +77,8 @@ class Challenge:
 
         try:
             received = await self.wait_for_action()
+            if received is None:
+                raise LeftServerError("User has left guild.")
             if hasattr(received, "content"):
                 # It's a message!
                 self.messages["answer"] = received
@@ -109,7 +113,11 @@ class Challenge:
             self.running = False
         if state:
             await self.log(
-                self.guild, ok_check("User passed captcha."), logmsg, member=self.member
+                self.guild,
+                ok_check("User passed captcha."),
+                logmsg,
+                allowed_tries=(self.trynum, self.limit),
+                member=self.member,
             )
         return state
 
@@ -242,7 +250,9 @@ class Challenge:
                 await message[1].delete()
                 del message
             except discord.Forbidden:
-                raise PermissionError("Cannot delete message.")
+                if not isinstance(self.channel, discord.DMChannel):
+                    # We're fine with not deleting user's message if it's in DM.
+                    raise PermissionError("Cannot delete message.")
             except discord.HTTPException:
                 errored = True
         return True if not errored else False
