@@ -1,11 +1,11 @@
 __author__ = ["Predeactor"]
-__version__ = "Beta 3"
+__version__ = "Beta 4"
 
 __patchnote__ = (
-    "***HHHHEEELLLLLLLLOOOOO USER!*** Thank for installing my new Captcha cog!\n"
-    "This cog is the super, evolved version of my old cog, Captcher, which is now deprecated for "
-    "this cog, and oh god, this is really a big step for me!\n\n"
-    "What can I say now? Yeah right, this message. You don't need to worry about them, they are "
+    "Hello user. Thank for installing my new Captcha cog!\n"
+    "This cog is the super, evolved version of my old cog, Captcher, which is now officially "
+    "deprecated for this cog, and oh god, this is really a big step for me!\n\n"
+    "What can I say now? YeahRight! This message. You don't need to worry about them, they are "
     "just my patchnotes for this cog! I hope you don't mind me for adding them, I may use them "
     "sometime, that's cool to keep peoples updated. You'll receive a message each time the "
     "patchnotes got updated.\n\n"
@@ -30,10 +30,10 @@ __patchnote_version__ = "1"
 
 __OLD_PATCHNOTES__ = {
     1: (
-        "***HHHHEEELLLLLLLLOOOOO USER!*** Thank for installing my new Captcha cog!\n"
-        "This cog is the super, evolved version of my old cog, Captcher, which is now deprecated for "
-        "this cog, and oh god, this is really a big step for me!\n\n"
-        "What can I say now? Yeah right, this message. You don't need to worry about them, they are "
+        "Hello user. Thank for installing my new Captcha cog!\n"
+        "This cog is the super, evolved version of my old cog, Captcher, which is now officially "
+        "deprecated for this cog, and oh god, this is really a big step for me!\n\n"
+        "What can I say now? YeahRight! This message. You don't need to worry about them, they are "
         "just my patchnotes for this cog! I hope you don't mind me for adding them, I may use them "
         "sometime, that's cool to keep peoples updated. You'll receive a message each time the "
         "patchnotes got updated.\n\n"

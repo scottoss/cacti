@@ -11,43 +11,11 @@ from redbot.core.utils.predicates import ReactionPredicate
 
 # Local
 from ..abc import MixinMeta
-
-
-async def build_embed_with_missing_permissions(permissions: List[str]):
-    embed = discord.Embed(
-        title="Missing required permissions.",
-        description=(
-            form.warning(
-                "In order to allow to set this parameter, you must give the bot the following "
-                "permissions."
-            )
-        ),
-        colour=discord.Colour.red().value,
-    )
-    strmissing = str()
-    for perm in permissions:
-        strmissing += "".join(("\n", form.inline(perm.replace("_", " ").capitalize())))
-    embed.add_field(
-        name=f"Missing permission{'s' if len(permissions) > 1 else ''}:", value=strmissing
-    )
-    return embed
-
-
-async def build_embed_with_missing_settings(settings: List[str]):
-    embed = discord.Embed(
-        title="Missing required settings.",
-        description=(
-            form.warning(
-                "In order to allow to set this parameter, you must set the following settings."
-            )
-        ),
-        colour=discord.Colour.red().value,
-    )
-    strmissing = str()
-    for setting in settings:
-        strmissing += "".join(("\n", form.inline(setting.replace("_", " ").capitalize())))
-    embed.add_field(name=f"Missing setting{'s' if len(settings) > 1 else ''}:", value=strmissing)
-    return embed
+from ..utils import (
+    check_permissions_in_channel,
+    build_embed_with_missing_permissions,
+    build_embed_with_missing_settings,
+)
 
 
 class Settings(MixinMeta, metaclass=ABCMeta):
@@ -87,7 +55,7 @@ class Settings(MixinMeta, metaclass=ABCMeta):
             )
             return
 
-        if needperm := await self.check_permissions_in_channel(
+        if needperm := await check_permissions_in_channel(
             [
                 "add_reactions",
                 "embed_links",
@@ -138,7 +106,7 @@ class Settings(MixinMeta, metaclass=ABCMeta):
             await ctx.send(form.info("Logging channel removed."))
             return
 
-        if needperm := await self.check_permissions_in_channel(
+        if needperm := await check_permissions_in_channel(
             [
                 "read_messages",
                 "read_message_history",
@@ -175,7 +143,7 @@ class Settings(MixinMeta, metaclass=ABCMeta):
             )
             return
 
-        if needperm := await self.check_permissions_in_channel(
+        if needperm := await check_permissions_in_channel(
             [
                 "add_reactions",
                 "embed_links",
@@ -303,7 +271,7 @@ class Settings(MixinMeta, metaclass=ABCMeta):
         """
         Set the roles to give when passing the captcha.
         """
-        if needperm := await self.check_permissions_in_channel(["manage_roles"], ctx.channel):
+        if needperm := await check_permissions_in_channel(["manage_roles"], ctx.channel):
             await ctx.send(embed=await build_embed_with_missing_permissions(needperm))
             return False
         await ctx.send_help()
@@ -318,8 +286,7 @@ class Settings(MixinMeta, metaclass=ABCMeta):
         if not roles:
             await ctx.send_help()
             return
-        if needperm := await self.check_permissions_in_channel(["manage_roles"], ctx.channel):
-            await ctx.send(embed=await build_embed_with_missing_permissions(needperm))
+        if await check_permissions_in_channel(["manage_roles"], ctx.channel):
             return
 
         message = ""
@@ -367,8 +334,7 @@ class Settings(MixinMeta, metaclass=ABCMeta):
         if not roles:
             await ctx.send_help()
             return
-        if needperm := await self.check_permissions_in_channel(["manage_roles"], ctx.channel):
-            await ctx.send(embed=await build_embed_with_missing_permissions(needperm))
+        if await check_permissions_in_channel(["manage_roles"], ctx.channel):
             return
 
         message = ""

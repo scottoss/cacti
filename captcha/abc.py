@@ -33,11 +33,6 @@ class MixinMeta(ABC):
     ):
         raise NotImplementedError()
 
-    @staticmethod
-    @abstractmethod
-    async def check_permissions_in_channel(permissions: List[str], channel: discord.TextChannel):
-        raise NotImplementedError()
-
     @abstractmethod
     async def create_challenge_for(self, member: discord.Member):
         raise NotImplementedError()

@@ -25,6 +25,7 @@ from .informations import (
     __patchnote_version__,
     __version__,
 )
+from .utils import build_kick_embed
 
 DEFAULT_GLOBAL = {"log_level": 50}
 DEFAULT_GUILD = {
@@ -38,16 +39,6 @@ DEFAULT_GUILD = {
     "retry": 3,  # The numnber of retry allowed.
 }
 log = logging.getLogger("red.predeactor.captcha")
-
-
-def build_kick_embed(guild: discord.Guild, reason: str):
-    embed = discord.Embed(
-        title=f"You have been kicked from {guild.name}.",
-        description="",
-        color=discord.Colour.red().value,
-    )
-    embed.add_field(name="Reason:", value=reason)
-    return embed
 
 
 class Captcha(
@@ -143,17 +134,6 @@ class Captcha(
                 allowed_mentions=discord.AllowedMentions(users=False),
             )
         raise DeletedValueError("Logging channel may have been deleted.")
-
-    @staticmethod
-    async def check_permissions_in_channel(permissions: List[str], channel: discord.TextChannel):
-        """Function to checks if the permissions are available in a guild.
-        This will return a list of the missing permissions.
-        """
-        missing_perm = []
-        for permission in permissions:
-            if not getattr(channel.permissions_for(channel.guild.me), permission):
-                missing_perm.append(permission)
-        return missing_perm
 
     async def basic_check(self, member: discord.Member):
         """
@@ -358,7 +338,7 @@ class Captcha(
         if not channel.permissions_for(self.bot.get_guild(challenge.guild.id).me).kick_members:
             raise PermissionError('Bot miss the "kick_members" permission.')
 
-        with suppress(discord.Forbidden):
+        with suppress(discord.Forbidden, discord.HTTPException):
             await challenge.member.send(embed=build_kick_embed(challenge.guild, reason))
         try:
             await challenge.guild.kick(challenge.member, reason=reason)
