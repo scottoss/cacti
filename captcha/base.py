@@ -109,12 +109,31 @@ class Captcha(
 
         log_channel: discord.TextChannel = self.bot.get_channel(log_channel_id)
         if log_channel and message_to_update:
-            await message_to_update.edit(
-                content=content,
-                file=file,
-                embed=embed,
-                allowed_mentions=discord.AllowedMentions(users=False),
-            )
+            try:
+                await message_to_update.edit(
+                    content=content,
+                    file=file,
+                    embed=embed,
+                    allowed_mentions=discord.AllowedMentions(users=False),
+                )
+            except discord.HTTPException:
+                if message_to_update.embeds:
+                    if message_to_update.embeds[0].title == "Message reached his maximum capacity!":
+                        # To avoid edit spam or something... smh
+                        return message_to_update
+                await message_to_update.edit(
+                    content=message_to_update.content,
+                    file=file,
+                    embed=discord.Embed(
+                        colour=discord.Colour.red().value,
+                        title="Message reached his maximum capacity!",
+                        description=(
+                            "I am unable to log more since the characters limit on this "
+                            "message has been reached."
+                        ),
+                    ),
+                    allowed_mentions=discord.AllowedMentions(users=False),
+                )
             return message_to_update
         if log_channel:
             return await log_channel.send(
@@ -135,6 +154,12 @@ class Captcha(
             if not getattr(channel.permissions_for(channel.guild.me), permission):
                 missing_perm.append(permission)
         return missing_perm
+
+    async def basic_check(self, member: discord.Member):
+        """
+        Check the basis from a member; used when a member join the server.
+        """
+        return await self.data.guild(member.guild).enabled()
 
     async def create_challenge_for(self, member: discord.Member) -> Challenge:
         """
@@ -167,31 +192,30 @@ class Captcha(
 
     async def give_temprole(self, challenge: Challenge):
         temprole = challenge.config["temprole"]
-        try:
-            await challenge.member.add_roles(
-                challenge.guild.get_role(temprole), reason="Beginning Captcha challenge."
-            )
-        except discord.Forbidden:
-            raise PermissionError('Bot miss the "manage_roles" permission.')
+        if temprole:
+            try:
+                await challenge.member.add_roles(
+                    challenge.guild.get_role(temprole), reason="Beginning Captcha challenge."
+                )
+            except discord.Forbidden:
+                raise PermissionError('Bot miss the "manage_roles" permission.')
 
     async def remove_temprole(self, challenge: Challenge):
         temprole = challenge.config["temprole"]
-        try:
-            await challenge.member.remove_roles(
-                challenge.guild.get_role(temprole), reason="Finishing Captcha challenge."
-            )
-        except discord.Forbidden:
-            raise PermissionError('Bot miss the "manage_roles" permission.')
+        if temprole:
+            try:
+                await challenge.member.remove_roles(
+                    challenge.guild.get_role(temprole), reason="Finishing Captcha challenge."
+                )
+            except discord.Forbidden:
+                raise PermissionError('Bot miss the "manage_roles" permission.')
 
     async def realize_challenge(self, challenge: Challenge):
         # Seems to be the last goddamn function I'll be writing...
         limit = await self.data.guild(challenge.member.guild).retry()
         is_ok = None
         timeout = False
-        try:
-            await self.give_temprole(challenge)
-        except PermissionError:
-            print("ALERT!")  # We stay shut on this one!
+        await self.give_temprole(challenge)
         try:
             while is_ok is not True:
                 if challenge.trynum > limit:
@@ -344,12 +368,6 @@ class Captcha(
 
     # PLEASE DON'T TOUCH THOSE FUNCTIONS WITH YOUR COG OR EVAL. Thanks. - Pred
     # Those should only be used by the cog - 4 bags of None of your business.
-
-    async def basic_check(self, member: discord.Member):
-        """
-        Check the basis from a member; used when a member join the server.
-        """
-        return await self.data.guild(member.guild).enabled()
 
     def format_help_for_context(self, ctx: commands.Context) -> str:
         """

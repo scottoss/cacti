@@ -1,6 +1,5 @@
 # Builtin or Pip
 from abc import ABCMeta
-from time import sleep
 from typing import List, Union
 
 # Discord/Red related
@@ -12,7 +11,6 @@ from redbot.core.utils.predicates import ReactionPredicate
 
 # Local
 from ..abc import MixinMeta
-from ..converters import RoleConverter
 
 
 async def build_embed_with_missing_permissions(permissions: List[str]):
@@ -237,6 +235,7 @@ class Settings(MixinMeta, metaclass=ABCMeta):
         """
         if time > 15:
             await ctx.send("I think 15 minutes is enough, don't you think?")
+            return
 
         await self.data.guild(ctx.guild).timeout.set(time)
         await ctx.send(
@@ -323,7 +322,6 @@ class Settings(MixinMeta, metaclass=ABCMeta):
             await ctx.send(embed=await build_embed_with_missing_permissions(needperm))
             return
 
-        await ctx.send("Invoked.")
         message = ""
         added = []
         already_added = []
@@ -373,7 +371,6 @@ class Settings(MixinMeta, metaclass=ABCMeta):
             await ctx.send(embed=await build_embed_with_missing_permissions(needperm))
             return
 
-        await ctx.send("Invoked.")
         message = ""
         removed = []
         not_found = []
@@ -410,7 +407,9 @@ class Settings(MixinMeta, metaclass=ABCMeta):
 
     @autorole.command(name="list")
     async def list_roles(self, ctx: commands.Context):
-        """List all roles that will be given."""
+        """
+        List all roles that will be given.
+        """
         all_roles = await self.data.guild(ctx.guild).autoroles()
         maybe_not_found = []
         message = ""
