@@ -1,5 +1,6 @@
-import discord
 from typing import List
+
+import discord
 from redbot.core.utils import chat_formatting as form
 
 

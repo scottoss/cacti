@@ -109,7 +109,10 @@ class Captcha(
                 )
             except discord.HTTPException:
                 if message_to_update.embeds:
-                    if message_to_update.embeds[0].title == "Message reached his maximum capacity!":
+                    if (
+                        message_to_update.embeds[0].title
+                        == "Message reached his maximum capacity!"
+                    ):
                         # To avoid edit spam or something... smh
                         return message_to_update
                 await message_to_update.edit(

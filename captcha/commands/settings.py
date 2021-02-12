@@ -12,9 +12,9 @@ from redbot.core.utils.predicates import ReactionPredicate
 # Local
 from ..abc import MixinMeta
 from ..utils import (
-    check_permissions_in_channel,
     build_embed_with_missing_permissions,
     build_embed_with_missing_settings,
+    check_permissions_in_channel,
 )
 
 
