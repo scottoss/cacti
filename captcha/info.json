@@ -13,6 +13,5 @@
     ],
     "requirements": [
         "discapty"
-    ],
-    "disabled": true
+    ]
 }
