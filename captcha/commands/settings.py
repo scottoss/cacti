@@ -33,7 +33,7 @@ class Settings(MixinMeta, metaclass=ABCMeta):
 
     config: commands.Group
 
-    @config.command(name="channel", usage="<destination = text_channel_or_'dm'>")
+    @config.command(name="channel", usage="<text_channel_or_'dm'>")
     async def challenge_channel(
         self, ctx: commands.Context, *, destination: Union[discord.TextChannel, str]
     ):
@@ -86,6 +86,7 @@ class Settings(MixinMeta, metaclass=ABCMeta):
     @config.command(
         name="logschannel",
         aliases=["lchann", "lchannel", "logschan", "logchannel", "logsc"],
+        usage="<text_channel_or_'none'>"
     )
     async def logging_channel(
         self, ctx: commands.Context, *, destination: Union[discord.TextChannel, str]
@@ -101,9 +102,12 @@ class Settings(MixinMeta, metaclass=ABCMeta):
         You can also use "None" if you wish to remove the logging channel.
         """
 
-        if not isinstance(destination, discord.TextChannel) and destination.lower() == "none":
-            await self.data.guild(ctx.guild).logschannel.clear()
-            await ctx.send(form.info("Logging channel removed."))
+        if not isinstance(destination, discord.TextChannel):
+            if destination.lower() == "none":
+                await self.data.guild(ctx.guild).logschannel.clear()
+                await ctx.send(form.info("Logging channel removed."))
+            else:
+                await ctx.send(form.error("Invalid destination."))
             return
 
         if needperm := await check_permissions_in_channel(
@@ -123,7 +127,7 @@ class Settings(MixinMeta, metaclass=ABCMeta):
             form.info("Logging channel registered: {chan}.".format(chan=destination.mention))
         )
 
-    @config.command(name="enable", aliases=["activate"])
+    @config.command(name="enable", aliases=["activate"], usage="<true_or_false>")
     async def activator(self, ctx: commands.Context, state: bool):
         """Enable or disable Captcha security.
 
@@ -163,7 +167,7 @@ class Settings(MixinMeta, metaclass=ABCMeta):
         await self.data.guild(ctx.guild).enabled.set(state)
         await ctx.send(form.info(form.bold("Captcha state registered: {stat}".format(stat=state))))
 
-    @config.command(name="type")
+    @config.command(name="type", usage="<type_of_captcha>")
     async def captcha_type_setter(self, ctx: commands.Context, captcha_type: str):
         """
         Change the type of Captcha challenge.

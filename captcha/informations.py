@@ -1,5 +1,5 @@
 __author__ = ["Predeactor"]
-__version__ = "Beta 4"
+__version__ = "Beta 5"
 
 __patchnote__ = (
     "Hello user. Thank for installing my new Captcha cog!\n"
