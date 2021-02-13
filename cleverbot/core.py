@@ -1,12 +1,12 @@
 import random
 from typing import Literal, Optional
 
-from .asynccleverbot import cleverbot as ac
-
 import discord
 from redbot.core import checks, commands
 from redbot.core.bot import Red
 from redbot.core.utils.chat_formatting import humanize_list
+
+from .asynccleverbot import cleverbot as ac
 
 
 class Core(commands.Cog):

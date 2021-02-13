@@ -1,3 +1,4 @@
+import re
 from asyncio import create_task
 from asyncio.exceptions import TimeoutError as Te
 from typing import Literal
@@ -6,10 +7,13 @@ import discord
 
 # noinspection PyUnresolvedReferences
 import ksoftapi
-import re
-
 from redbot.core import commands
-from redbot.core.utils.chat_formatting import bold, humanize_list, pagify, inline
+from redbot.core.utils.chat_formatting import (
+    bold,
+    humanize_list,
+    inline,
+    pagify,
+)
 from redbot.core.utils.menus import DEFAULT_CONTROLS, menu
 from redbot.core.utils.predicates import MessagePredicate
 
@@ -27,7 +31,7 @@ BOT_SONG_RE = re.compile(
 class Lyrics(commands.Cog):
 
     __author__ = ["Predeactor"]
-    __version__ = "v1.0.6"
+    __version__ = "v1.0.7"
 
     def __init__(self, bot, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -106,7 +110,11 @@ class Lyrics(commands.Cog):
         color = await ctx.embed_color()
         for text in pagify(music.lyrics):
             embed = discord.Embed(color=color, title=music.name, description=None)
-            embed.set_thumbnail(url=music.album_art)
+            embed.set_thumbnail(
+                url=music.album_art
+                if str(music.album_art) != "https://cdn.ksoft.si/images/Logo1024%20-%20W.png"
+                else discord.Embed.Empty
+            )
             embed.set_footer(text="Powered by KSoft.Si.", icon_url=ctx.author.avatar_url)
             embed.description = text
             embeds.append(embed)

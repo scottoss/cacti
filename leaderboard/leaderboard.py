@@ -6,7 +6,11 @@ from typing import Literal
 import discord
 from redbot.core import Config, commands
 from redbot.core.utils import AsyncIter
-from redbot.core.utils.chat_formatting import box, humanize_list, humanize_timedelta
+from redbot.core.utils.chat_formatting import (
+    box,
+    humanize_list,
+    humanize_timedelta,
+)
 
 
 class LeaderBoard(commands.Cog):

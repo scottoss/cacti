@@ -1,7 +1,12 @@
 from typing import Literal
 
 from redbot.core import commands
-from redbot.core.utils.chat_formatting import bold, humanize_list, inline, pagify
+from redbot.core.utils.chat_formatting import (
+    bold,
+    humanize_list,
+    inline,
+    pagify,
+)
 
 
 class CommandsCounter(commands.Cog):

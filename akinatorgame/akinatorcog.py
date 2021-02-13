@@ -1,18 +1,28 @@
 import asyncio
 
+import discord
+from akinator import CantGoBackAnyFurther, InvalidLanguageError
+from akinator.async_aki import Akinator
 from redbot.core import commands
 from redbot.core.bot import Red
-from redbot.core.utils.predicates import MessagePredicate
 from redbot.core.utils.chat_formatting import humanize_list
 from redbot.core.utils.embed import randomize_colour
-
-from akinator.async_aki import Akinator
-from akinator import CantGoBackAnyFurther, InvalidLanguageError
-
-import discord
+from redbot.core.utils.predicates import MessagePredicate
 
 __author__ = ["Predeactor"]
 __version__ = "Beta v0.6.2"
+
+
+def testing_check():
+    async def predicate(ctx: commands.Context):
+        """We don't like spam, at Red, section #testing."""
+        if ctx.channel.id in (133251234164375552,):
+            if ctx.invoked_with != "help":
+                await ctx.send("No no no! I won't let you get smashed by Defender! - Pred.")
+            return False
+        return True
+
+    return commands.check(predicate)
 
 
 class AkinatorCog(commands.Cog, name="Akinator"):
@@ -38,6 +48,7 @@ class AkinatorCog(commands.Cog, name="Akinator"):
         )
 
     @commands.group(aliases=["aki"])
+    @testing_check()
     async def akinator(self, ctx: commands.GuildContext):
         """
         Answer Akinator's question and get challenged!
