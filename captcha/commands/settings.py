@@ -1,6 +1,6 @@
 # Builtin or Pip
 from abc import ABCMeta
-from typing import List, Union
+from typing import Union
 
 # Discord/Red related
 import discord
@@ -86,7 +86,7 @@ class Settings(MixinMeta, metaclass=ABCMeta):
     @config.command(
         name="logschannel",
         aliases=["lchann", "lchannel", "logschan", "logchannel", "logsc"],
-        usage="<text_channel_or_'none'>"
+        usage="<text_channel_or_'none'>",
     )
     async def logging_channel(
         self, ctx: commands.Context, *, destination: Union[discord.TextChannel, str]

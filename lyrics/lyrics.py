@@ -95,7 +95,7 @@ class Lyrics(commands.Cog):
             user_message = await self.bot.wait_for("message", check=predicator, timeout=60)
             await bot_message.delete()
         except Te:
-            await ctx.send("It's so silent on the outside...")
+            await ctx.send("Rude.")
             await bot_message.delete()
             return
 
