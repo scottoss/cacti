@@ -20,7 +20,7 @@ This is a repo made for [Red](https://github.com/Cog-Creators/Red-DiscordBot).
 | Cog Name                | Description                                                                              | Version     |
 | ----------------------- | ---------------------------------------------------------------------------------------- | ----------- |
 | Akinator (akinatorgame) | A genius right in your bot, ready to discover yourself.                                  | Beta v0.6.2 |
-| Captcha                 | A Captcha defensive system. to challenge the new users                                   | v1.0.0      |
+| Captcha                 | A Captcha defensive system. to challenge the new users                                   | v1.0.1      |
 | CleverBot               | Talk or ask a question to CleverBot for free.                                            | v1.0.5      |
 | CommandsCounter         | Know how many time a command has been used super easily.                                 | v1          |
 | CustomCooldown          | Custom slowmode/cooldown moderated by the bot itself.                                    | v1.3.3      |
