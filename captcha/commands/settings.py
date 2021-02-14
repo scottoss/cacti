@@ -1,5 +1,6 @@
 # Builtin or Pip
 from abc import ABCMeta
+from random import choice
 from typing import Union
 
 # Discord/Red related
@@ -48,29 +49,28 @@ class Settings(MixinMeta, metaclass=ABCMeta):
             await ctx.send_help()
             await ctx.send(
                 form.error(
-                    form.bold(
-                        "You can only use 'dm' as the destination if you don't want to use a channel."
-                    )
+                    "You can only use 'dm' as the destination if you don't want to use a channel."
                 )
             )
             return
 
-        if needperm := await check_permissions_in_channel(
-            [
-                "add_reactions",
-                "embed_links",
-                "kick_members",
-                "manage_messages",
-                "read_messages",
-                "read_message_history",
-                "send_messages",
-                "manage_roles",
-                "attach_files",
-            ],
-            destination,
-        ):
-            await ctx.send(embed=await build_embed_with_missing_permissions(needperm))
-            return
+        if is_text_channel:
+            if needperm := await check_permissions_in_channel(
+                [
+                    "add_reactions",
+                    "embed_links",
+                    "kick_members",
+                    "manage_messages",
+                    "read_messages",
+                    "read_message_history",
+                    "send_messages",
+                    "manage_roles",
+                    "attach_files",
+                ],
+                destination,
+            ):
+                await ctx.send(embed=await build_embed_with_missing_permissions(needperm))
+                return
 
         await self.data.guild(ctx.guild).channel.set(
             destination.id if is_text_channel else destination
@@ -139,6 +139,7 @@ class Settings(MixinMeta, metaclass=ABCMeta):
         if config["channel"] is None:
             await ctx.send(embed=await build_embed_with_missing_settings(["channel"]))
             return
+        is_dm = config["channel"] == "dm"
 
         actual_state = config["enabled"]
         if actual_state is state:
@@ -147,8 +148,10 @@ class Settings(MixinMeta, metaclass=ABCMeta):
             )
             return
 
-        if needperm := await check_permissions_in_channel(
-            [
+        if is_dm:
+            perms = ["kick_members", "manage_roles"]
+        else:
+            perms = [
                 "add_reactions",
                 "embed_links",
                 "kick_members",
@@ -158,14 +161,17 @@ class Settings(MixinMeta, metaclass=ABCMeta):
                 "send_messages",
                 "manage_roles",
                 "attach_files",
-            ],
-            self.bot.get_channel(config["channel"]),
+            ]
+
+        if needperm := await check_permissions_in_channel(
+            perms,
+            self.bot.get_channel(config["channel"]) if not is_dm else ctx.channel,
         ):
             await ctx.send(embed=await build_embed_with_missing_permissions(needperm))
             return
 
         await self.data.guild(ctx.guild).enabled.set(state)
-        await ctx.send(form.info(form.bold("Captcha state registered: {stat}".format(stat=state))))
+        await ctx.send(form.info("Captcha state registered: {stat}".format(stat=state)))
 
     @config.command(name="type", usage="<type_of_captcha>")
     async def captcha_type_setter(self, ctx: commands.Context, captcha_type: str):
@@ -194,9 +200,7 @@ class Settings(MixinMeta, metaclass=ABCMeta):
             return
 
         await self.data.guild(ctx.guild).type.set(captcha_type)
-        await ctx.send(
-            form.info(form.bold("Captcha type registered: {type}".format(type=captcha_type)))
-        )
+        await ctx.send(form.info("Captcha type registered: {type}".format(type=captcha_type)))
 
     @config.command(name="timeout", usage="<time_in_minutes>")
     async def timeout_setter(self, ctx: commands.Context, time: int):
@@ -208,6 +212,8 @@ class Settings(MixinMeta, metaclass=ABCMeta):
         if time > 15:
             await ctx.send("I think 15 minutes is enough, don't you think?")
             return
+        if time < 1:
+            await ctx.send("Time must be more than 0.")
 
         await self.data.guild(ctx.guild).timeout.set(time)
         await ctx.send(
@@ -241,7 +247,7 @@ class Settings(MixinMeta, metaclass=ABCMeta):
                 # EEEHHHH C'EST LE DAB DU J'M'EN BAT ROYAL LES COUILLES
             return
 
-        if needperm := await self.check_permissions_in_channel(["manage_roles"], ctx.channel):
+        if needperm := await check_permissions_in_channel(["manage_roles"], ctx.channel):
             await ctx.send(embed=await build_embed_with_missing_permissions(needperm))
             return
 
@@ -253,15 +259,27 @@ class Settings(MixinMeta, metaclass=ABCMeta):
             return
 
         await self.data.guild(ctx.guild).temprole.set(role.id)
-        await ctx.send(
-            form.info(form.bold("Temporary role registered: {role}".format(role=role.name)))
-        )
+        await ctx.send(form.info("Temporary role registered: {role}".format(role=role.name)))
 
     @config.command(name="allowedretries", usage="<number_of_retry>")
     async def retries_setter(self, ctx: commands.Context, number_of_retries: int):
         """
         Set the number of retries allowed before getting kicked.
         """
+        lol = [
+            "You're totally hopeless.",
+            "Pathetic. Just pathetic.",
+            "Oh, you annoy me.",
+            "Bored?",
+            "Enough, we're done here.",
+            "How depraved.",
+            "Trash will be trash.",
+            "Sadist.",
+        ]
+        if number_of_retries < 1:
+            await ctx.send(choice(lol))
+            return
+
         await self.data.guild(ctx.guild).retry.set(number_of_retries)
         await ctx.send(f"Alright, it's been set to {str(number_of_retries)}")
 
