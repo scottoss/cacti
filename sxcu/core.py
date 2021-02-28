@@ -1,4 +1,5 @@
 import re
+from typing import Literal, Optional, Union
 
 import aiohttp
 import discord
@@ -6,8 +7,6 @@ from redbot.core import commands
 from redbot.core.utils.chat_formatting import humanize_list
 
 from .errors import SubNeedToken, SubWrongToken, UnallowedFileType
-
-from typing import Union, Optional, Literal
 
 
 class SXCU(commands.Cog):

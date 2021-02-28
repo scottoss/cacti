@@ -1,7 +1,7 @@
 import logging
 from contextlib import suppress
 from datetime import datetime
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 import discord
 from redbot.core import Config, commands

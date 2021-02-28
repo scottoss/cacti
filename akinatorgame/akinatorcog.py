@@ -1,19 +1,29 @@
 import asyncio
 from json import JSONDecodeError
 
+import discord
+from akinator import AkiNoQuestions, CantGoBackAnyFurther, InvalidLanguageError
+from akinator.async_aki import Akinator
 from redbot.core import commands
 from redbot.core.bot import Red
-from redbot.core.utils.predicates import MessagePredicate
 from redbot.core.utils.chat_formatting import humanize_list
 from redbot.core.utils.embed import randomize_colour
-
-from akinator.async_aki import Akinator
-from akinator import CantGoBackAnyFurther, InvalidLanguageError, AkiNoQuestions
-
-import discord
+from redbot.core.utils.predicates import MessagePredicate
 
 __author__ = ["Predeactor"]
-__version__ = "Beta v0.6.3"
+__version__ = "Beta v0.6.4"
+
+
+def testing_check():
+    async def predicate(ctx: commands.Context):
+        """We don't like spam, at Red, section #testing."""
+        if ctx.channel.id in (133251234164375552,):
+            if ctx.invoked_with != "help":
+                await ctx.send("No no no! I won't let you get smashed by Defender! - Pred.")
+            return False
+        return True
+
+    return commands.check(predicate)
 
 
 class AkinatorCog(commands.Cog, name="Akinator"):
@@ -39,6 +49,7 @@ class AkinatorCog(commands.Cog, name="Akinator"):
         )
 
     @commands.group(aliases=["aki"])
+    @testing_check()
     async def akinator(self, ctx: commands.GuildContext):
         """
         Answer Akinator's question and get challenged!
@@ -62,7 +73,10 @@ class AkinatorCog(commands.Cog, name="Akinator"):
         await ctx.send_help()
         await ctx.send("Are you ready to answer Akinator's questions? (y/n)")
         check = MessagePredicate.yes_or_no(ctx=ctx)
-        await self.bot.wait_for("message", timeout=60, check=check)
+        try:
+            await self.bot.wait_for("message", timeout=60, check=check)
+        except TimeoutError:
+            check.result = False
         if not check.result:
             await ctx.send("See you later then! \N{WAVING HAND SIGN}")
             return
@@ -174,7 +188,6 @@ class UserGame:
 
     async def answer_questions(self):
         """A while loop."""
-        user_prompt = None
         while self.akinator.progression <= self.prog:
             user_prompt = await self.ask_question()
             if not user_prompt:

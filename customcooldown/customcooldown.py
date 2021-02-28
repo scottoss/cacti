@@ -1,8 +1,8 @@
 import asyncio
 from contextlib import suppress as suppressor
 from datetime import datetime
-from typing import Literal
 from string import Template
+from typing import Literal
 
 import discord
 from redbot.core import Config, checks, commands
@@ -17,7 +17,6 @@ from redbot.core.utils.chat_formatting import (
     warning,
 )
 from redbot.core.utils.predicates import MessagePredicate
-
 
 default_channel_message = (
     "Sorry $member, this channel is ratelimited! You'll be able to post again in $channel in "

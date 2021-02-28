@@ -19,13 +19,14 @@ This is a repo made for [Red](https://github.com/Cog-Creators/Red-DiscordBot).
 
 | Cog Name                | Description                                                                              | Version     |
 | ----------------------- | ---------------------------------------------------------------------------------------- | ----------- |
-| Akinator (akinatorgame) | A genius right in your bot, ready to discover yourself.                                  | Beta v0.6.2 |
-| Captcha                 | A Captcha defensive system. to challenge the new users                                   | v1.0.0      |
+| Akinator                | A genius right in your bot, ready to discover yourself.                                  | Beta v0.6.4 |
+| Captcha                 | A Captcha defensive system. to challenge the new users                                   | v1.0.1      |
 | CleverBot               | Talk or ask a question to CleverBot for free.                                            | v1.0.5      |
 | CommandsCounter         | Know how many time a command has been used super easily.                                 | v1          |
 | CustomCooldown          | Custom slowmode/cooldown moderated by the bot itself.                                    | v1.3.3      |
 | LeaderBoard             | Global reputation system using points.                                                   | v1.0.2      |
-| Lyrics                  | Get lyrics of a music through KSoft.Si.                                                  | v1.0.6      |
+| Lyrics                  | Get lyrics of a music through KSoft.Si.                                                  | v1.0.7      |
+| Miku                    | Return a random image from https://mikuapi.predeactor.net                                | v1          |
 | SXCU                    | Shorten your link, upload your images through a custom subdomain and more in the future. | Beta v0.4   |
 
 ## Hidden cogs

@@ -1,10 +1,9 @@
 import inspect
+from typing import Literal
 
 from redbot.core import commands
 from redbot.core.utils.chat_formatting import pagify
-from redbot.core.utils.menus import menu, DEFAULT_CONTROLS
-
-from typing import Literal
+from redbot.core.utils.menus import DEFAULT_CONTROLS, menu
 
 
 class CodeSource(commands.Cog):

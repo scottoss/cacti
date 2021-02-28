@@ -3,6 +3,7 @@ import logging
 
 # Local
 from abc import ABCMeta
+from traceback import format_exception
 
 from discord import Member
 from redbot.core import commands
@@ -17,25 +18,40 @@ class Listeners(MixinMeta, metaclass=ABCMeta):
     async def runner(self, member: Member):
         allowed = await self.basic_check(member)
         if allowed:
+            challenge = await self.create_challenge_for(member)
+            # noinspection PyBroadException
             try:
-                challenge = await self.create_challenge_for(member)
                 await self.realize_challenge(challenge)
+            except Exception as e:
+                log.critical(
+                    f"An unexpected error happened!\n"
+                    f"Guild Name & ID: {challenge.guild.name} | {challenge.guild.id}"
+                    f"Error: {format_exception(type(e), e, e.__traceback__)}"
+                )
             finally:
                 await self.delete_challenge_for(member)
 
     async def cleaner(self, member: Member):
-        if self.is_running_challenge(member):
-            try:
-                challenge = self.obtain_challenge(member)
-                await challenge.cleanup_messages()
-                await self.send_or_update_log_message(
-                    challenge.guild,
-                    bold("User has left the server."),
-                    challenge.messages["logs"],
-                    member=challenge.member,
-                )
-            finally:
-                await self.delete_challenge_for(member)
+        try:
+            challenge = self.obtain_challenge(member)
+        except KeyError:
+            return
+        try:
+            await challenge.cleanup_messages()
+            await self.send_or_update_log_message(
+                challenge.guild,
+                bold("User has left the server."),
+                challenge.messages["logs"],
+                member=challenge.member,
+            )
+        except Exception as e:
+            log.critical(
+                f"An unexpected error happened!\n"
+                f"Guild Name & ID: {challenge.guild.name} | {challenge.guild.id}"
+                f"Error: {format_exception(type(e), e, e.__traceback__)}"
+            )
+        finally:
+            await self.delete_challenge_for(member)
 
     @commands.Cog.listener()
     async def on_member_join(self, member: Member):
