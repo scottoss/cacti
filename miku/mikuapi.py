@@ -1,10 +1,12 @@
+from typing import Literal
+
 import aiohttp
 import discord
-from typing import Literal
 from redbot.core import commands
 from redbot.core.utils.chat_formatting import humanize_list
 
 BASE_URL = "https://mikuapi.predeactor.net"
+
 
 class Miku(commands.Cog):
     """
@@ -52,8 +54,7 @@ class Miku(commands.Cog):
                     await ctx.send("API unavailable.")
                     return
         embed = discord.Embed(
-            title="Here's a pic of Hatsune Miku!",
-            color=await self.bot.get_embed_colour(ctx)
+            title="Here's a pic of Hatsune Miku!", color=await self.bot.get_embed_colour(ctx)
         )
         embed.set_image(url=url["url"])
         embed.set_footer(text="From https://mikuapi.predeactor.net")

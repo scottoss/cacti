@@ -1,16 +1,14 @@
 import asyncio
 from json import JSONDecodeError
 
+import discord
+from akinator import AkiNoQuestions, CantGoBackAnyFurther, InvalidLanguageError
+from akinator.async_aki import Akinator
 from redbot.core import commands
 from redbot.core.bot import Red
 from redbot.core.utils.chat_formatting import humanize_list
 from redbot.core.utils.embed import randomize_colour
 from redbot.core.utils.predicates import MessagePredicate
-
-from akinator.async_aki import Akinator
-from akinator import CantGoBackAnyFurther, InvalidLanguageError, AkiNoQuestions
-
-import discord
 
 __author__ = ["Predeactor"]
 __version__ = "Beta v0.6.4"
