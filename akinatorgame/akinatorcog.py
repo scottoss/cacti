@@ -13,7 +13,7 @@ from akinator import CantGoBackAnyFurther, InvalidLanguageError, AkiNoQuestions
 import discord
 
 __author__ = ["Predeactor"]
-__version__ = "Beta v0.6.3"
+__version__ = "Beta v0.6.4"
 
 
 def testing_check():
@@ -75,7 +75,10 @@ class AkinatorCog(commands.Cog, name="Akinator"):
         await ctx.send_help()
         await ctx.send("Are you ready to answer Akinator's questions? (y/n)")
         check = MessagePredicate.yes_or_no(ctx=ctx)
-        await self.bot.wait_for("message", timeout=60, check=check)
+        try:
+            await self.bot.wait_for("message", timeout=60, check=check)
+        except TimeoutError:
+            check.result = False
         if not check.result:
             await ctx.send("See you later then! \N{WAVING HAND SIGN}")
             return
