@@ -14,7 +14,7 @@ class Miku(commands.Cog):
     """
 
     __author__ = ["Predeactor"]
-    __version__ = "v1"
+    __version__ = "v1.0.1"
 
     def __init__(self, bot):
         self.bot = bot
@@ -44,18 +44,28 @@ class Miku(commands.Cog):
     async def miku(self, ctx: commands.Context):
         async with aiohttp.ClientSession() as session:
             async with session.get(BASE_URL + "/random") as response:
-                if response.status != 200:
-                    await ctx.send(
-                        "I received an unexpectable error code. Please contact the owner."
-                    )
+                if response.status == 503:
+                    await ctx.send("The API is actually in maintenance, please retry later.")
+                    return
                 try:
+                    status = response.status
                     url = await response.json()
                 except aiohttp.ContentTypeError:
-                    await ctx.send("API unavailable.")
+                    await ctx.send(
+                        "API unavailable. Status code: {code}\nIt may be due of a "
+                        "maintenance.".format(code=status)
+                    )
                     return
         embed = discord.Embed(
             title="Here's a pic of Hatsune Miku!", color=await self.bot.get_embed_colour(ctx)
         )
-        embed.set_image(url=url["url"])
+        try:
+            embed.set_image(url=url["url"])
+        except KeyError:
+            await ctx.send(
+                "I received an incorrect format from the API\nStatus code: {code}".format(
+                    code=status
+                )
+            )
         embed.set_footer(text="From https://mikuapi.predeactor.net")
         await ctx.send(embed=embed)
