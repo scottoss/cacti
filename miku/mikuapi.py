@@ -5,7 +5,7 @@ import discord
 from redbot.core import commands
 from redbot.core.utils.chat_formatting import humanize_list
 
-BASE_URL = "https://mikuapi.predeactor.net"
+BASE_URL = "https://cacti-api.herokuapp.com"
 
 
 class Miku(commands.Cog):
@@ -41,9 +41,9 @@ class Miku(commands.Cog):
 
     @commands.command()
     @commands.bot_has_permissions(embed_links=True)
-    async def miku(self, ctx: commands.Context):
+    async def cacti(self, ctx: commands.Context):
         async with aiohttp.ClientSession() as session:
-            async with session.get(BASE_URL + "/random") as response:
+            async with session.get(BASE_URL) as response:
                 if response.status == 503:
                     await ctx.send("The API is actually in maintenance, please retry later.")
                     return
@@ -67,5 +67,5 @@ class Miku(commands.Cog):
                     code=status
                 )
             )
-        embed.set_footer(text="From https://mikuapi.predeactor.net")
+        embed.set_footer(text="From https://cacti-api.herokuapp.com/")
         await ctx.send(embed=embed)
